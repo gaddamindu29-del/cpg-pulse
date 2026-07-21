@@ -1,0 +1,30 @@
+# Data-quality suite for the promotions reference table.
+table: promotions
+checks:
+  - name: promotion_id_not_null
+    category: NULL_CHECK
+    type: not_null
+    column: promotion_id
+
+  - name: start_date_before_end_date
+    category: BUSINESS_RULE
+    type: date_order
+    start_column: start_date
+    end_column: end_date
+
+  - name: promotional_price_non_negative
+    category: RANGE_CHECK
+    type: min_value
+    column: promotional_price
+    min: 0
+
+  - name: discount_percentage_within_bounds
+    category: RANGE_CHECK
+    type: max_value
+    column: discount_percentage
+    max: 90
+
+  - name: promotion_id_uniqueness
+    category: UNIQUENESS
+    type: unique_keys
+    columns: [promotion_id]

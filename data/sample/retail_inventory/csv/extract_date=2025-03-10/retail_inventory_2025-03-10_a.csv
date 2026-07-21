@@ -1,0 +1,2 @@
+retailer_id,store_id,retailer_product_id,snapshot_date,on_hand_units,on_order_units,reserved_qty,available_units
+RTL-WMT,S-WMT-0001,WMT-190652,2025-02-26,4,0.0,0,4

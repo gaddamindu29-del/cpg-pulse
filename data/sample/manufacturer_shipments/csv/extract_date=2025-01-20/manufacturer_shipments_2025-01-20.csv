@@ -1,0 +1,4 @@
+shipment_id,retailer_id,distribution_center_id,product_id,shipment_date,units_shipped,shipment_status,estimated_delivery_date,actual_delivery_date
+SHP-0000218,RTL-AMZ,DC-SE-01,P00005,2025-01-19,62,CANCELLED,2025-01-24,
+SHP-0000227,RTL-AMZ,DC-SE-01,P00006,2025-01-19,17,DELIVERED,2025-01-24,2025-01-23
+SHP-0000254,RTL-AMZ,DC-SE-01,P00009,2025-01-19,89,DELIVERED,2025-01-26,2025-01-27

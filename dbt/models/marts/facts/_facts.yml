@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: fact_retail_sales
+    description: "Retail POS sales fact. Grain: retailer x store x retailer_product x transaction_date x sales_channel."
+    columns:
+      - name: sales_sk
+        tests: [unique, not_null]
+      - name: units_sold
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+  - name: fact_inventory_snapshot
+    description: "Retail inventory fact. Grain: retailer x store x retailer_product x snapshot_date."
+    columns:
+      - name: inventory_sk
+        tests: [unique, not_null]
+      - name: available_units
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_shipments
+    description: "Manufacturer shipments fact. Grain: one row per shipment line."
+    columns:
+      - name: shipment_id
+        tests: [unique, not_null]
+
+  - name: fact_promotions
+    description: "Promotion activity fact. Grain: retailer x product x promotion x activity_date."
+    columns:
+      - name: promotion_activity_sk
+        tests: [unique, not_null]
+
+  - name: fact_ecommerce_orders
+    description: "Direct-to-consumer order fact. Grain: order_id x product_id."
+    columns:
+      - name: ecommerce_order_sk
+        tests: [unique, not_null]
+
+  - name: fact_data_quality_results
+    description: "Data-quality check execution fact. Grain: one row per DQ check run."
+    columns:
+      - name: dq_result_id
+        tests: [unique, not_null]

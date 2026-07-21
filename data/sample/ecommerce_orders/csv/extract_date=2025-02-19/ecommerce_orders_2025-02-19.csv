@@ -1,0 +1,3 @@
+order_id,order_date,customer_id,product_id,units_ordered,unit_price,discount_amount,net_sales,order_status,fulfillment_type,return_flag
+ORD-00000344,2025-02-17,CUST-0000200,P00011,1,7.76,0.0,7.76,DELIVERED,STANDARD_SHIP,False
+ORD-00000345,2025-02-17,CUST-0000133,P00011,2,7.76,0.0,15.52,DELIVERED,STANDARD_SHIP,False

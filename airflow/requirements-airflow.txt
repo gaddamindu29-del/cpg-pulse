@@ -1,0 +1,14 @@
+# Extra packages installed into the official Airflow image on top of Airflow
+# core. Kept separate from the top-level requirements.txt because Airflow's
+# own dependency pins (installed via --constraint in the Dockerfile) must
+# govern this environment, not the host/dev requirements.txt.
+# Note: architecture.md documents that Great Expectations was evaluated and
+# deliberately NOT used -- its dependency footprint conflicts with this image's
+# pinned Airflow constraints file. spark/quality/ implements an equivalent
+# expectation-suite pattern in-house instead (see docs/architecture.md section 6).
+boto3==1.34.131
+pandas==2.2.2
+pyarrow==16.1.0
+psycopg2-binary==2.9.9
+dbt-core==1.8.3
+dbt-postgres==1.8.2

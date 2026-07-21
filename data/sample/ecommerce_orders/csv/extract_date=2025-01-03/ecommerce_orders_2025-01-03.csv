@@ -1,0 +1,4 @@
+order_id,order_date,customer_id,product_id,units_ordered,unit_price,discount_amount,net_sales,order_status,fulfillment_type,return_flag
+ORD-00000002,2025-01-01,CUST-0000495,P00004,1,7.51,0.0,7.51,CANCELLED,STANDARD_SHIP,False
+ORD-00000004,2025-01-01,CUST-0000389,P00008,1,1.86,0.0,1.86,CANCELLED,SUBSCRIBE_AND_SAVE,False
+ORD-00000006,2025-01-01,CUST-0000076,P00011,1,7.76,0.0,7.76,DELIVERED,STANDARD_SHIP,False

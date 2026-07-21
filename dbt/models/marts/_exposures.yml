@@ -1,0 +1,44 @@
+version: 2
+
+exposures:
+  - name: cpg_pulse_api
+    label: CPG Pulse FastAPI Service
+    type: application
+    maturity: medium
+    url: "http://localhost:8000/docs"
+    description: >
+      FastAPI service (api/) that serves sales, inventory-risk, promotion, and
+      data-quality endpoints directly off the marts schema. See
+      docs/source_to_target_mapping.md for which endpoint reads which model.
+    depends_on:
+      - ref('fact_retail_sales')
+      - ref('fact_inventory_snapshot')
+      - ref('fact_shipments')
+      - ref('fact_promotions')
+      - ref('fact_ecommerce_orders')
+      - ref('fact_data_quality_results')
+      - ref('dim_product')
+      - ref('dim_store')
+      - ref('dim_retailer')
+    owner:
+      name: Data Engineering
+      email: data-eng@example.com
+
+  - name: cpg_pulse_dashboard
+    label: CPG Pulse Streamlit Dashboard
+    type: dashboard
+    maturity: medium
+    url: "http://localhost:8501"
+    description: >
+      Streamlit dashboard (dashboard/) -- Executive Overview, Sales
+      Performance, Inventory Intelligence, Promotion Analytics, Shipment
+      Reconciliation, and Data Quality/Ops pages. Reads through the API, not
+      directly from the warehouse (see docs/architecture.md section 5).
+    depends_on:
+      - ref('fact_retail_sales')
+      - ref('fact_inventory_snapshot')
+      - ref('fact_promotions')
+      - ref('fact_data_quality_results')
+    owner:
+      name: Data Engineering
+      email: data-eng@example.com

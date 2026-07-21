@@ -1,0 +1,5 @@
+retailer_id,retailer_name,retailer_type
+RTL-WMT,GreatValue Mart,Mass Merchandiser
+RTL-TGT,Northgate Stores,Mass Merchandiser
+RTL-KRG,FreshField Grocers,Grocery
+RTL-AMZ,SwiftCart Online,E-commerce Marketplace

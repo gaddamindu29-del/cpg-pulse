@@ -1,0 +1,13 @@
+product_id,upc,brand,category,subcategory,product_name,flavor,package_size,case_quantity,unit_cost,launch_date,discontinued_date
+P00001,15204612357,PeakRefresh,Beverages,Sports Drinks,PeakRefresh Sports Drinks Citrus 12-Pack Cans,Citrus,12-Pack Cans,6,1.44,2023-11-22,
+P00002,30445094214,GoldenBite,Snacks,Popcorn,GoldenBite Popcorn Classic Salted 8 oz Bag,Classic Salted,8 oz Bag,12,2.41,2024-11-12,2025-03-02
+P00003,70024419806,MorningGrain,Breakfast & Cereal,Pancake Mix,MorningGrain Pancake Mix Cinnamon 12 oz Box,Cinnamon,12 oz Box,24,2.77,2023-01-18,
+P00004,77157430573,PureGlow,Personal Care,Oral Care,PureGlow Oral Care Citrus Fresh 8 oz Bottle,Citrus Fresh,8 oz Bottle,24,3.58,2022-12-14,
+P00005,67217376700,ClearHome,Household,Paper Towels,ClearHome Paper Towels Lemon 12-Roll Pack,Lemon,12-Roll Pack,8,3.83,2023-07-20,
+P00006,92982384838,FrostFarm,Frozen Foods,Ice Cream,FrostFarm Ice Cream Garden Blend 16 oz Bag,Garden Blend,16 oz Bag,12,3.56,2024-05-25,
+P00007,20852717184,SavoryCo,Condiments & Sauces,Salad Dressing,SavoryCo Salad Dressing Original 14 oz Bottle,Original,14 oz Bottle,6,1.37,2024-02-26,
+P00008,78134396471,SunCrest,Beverages,Sports Drinks,SunCrest Sports Drinks Citrus 1 Liter Bottle,Citrus,1 Liter Bottle,6,0.89,2024-11-16,
+P00009,93911380759,GoldenBite,Snacks,Granola Bars,GoldenBite Granola Bars Classic Salted 6-Count Box,Classic Salted,6-Count Box,12,1.57,2024-09-20,
+P00010,52421229849,MorningGrain,Breakfast & Cereal,Pancake Mix,MorningGrain Pancake Mix Honey Nut 10-Count Box,Honey Nut,10-Count Box,6,2.54,2025-04-06,
+P00011,45298437741,DailyFresh,Personal Care,Shampoo,DailyFresh Shampoo Mint 4-Pack,Mint,4-Pack,12,3.7,2023-07-05,
+P00012,25470433054,TidySpring,Household,Dish Soap,TidySpring Dish Soap Lemon 6-Roll Pack,Lemon,6-Roll Pack,6,5.68,2025-01-31,

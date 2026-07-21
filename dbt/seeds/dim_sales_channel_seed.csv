@@ -1,0 +1,5 @@
+channel_code,channel_name,channel_type
+IN_STORE,In-Store,Physical Retail
+RETAILER_ONLINE,Retailer.com Pickup/Delivery,Omnichannel
+MARKETPLACE,Online Marketplace,E-commerce
+DTC_ECOMMERCE,Direct-to-Consumer,E-commerce

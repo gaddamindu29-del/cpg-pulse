@@ -1,0 +1,20 @@
+select
+    run_id,
+    dag_id,
+    task_id,
+    source_name,
+    run_type,
+    business_date::date as business_date,
+    started_at::timestamp as started_at,
+    ended_at::timestamp as ended_at,
+    duration_seconds::numeric(12, 2) as duration_seconds,
+    status,
+    records_read::bigint as records_read,
+    records_valid::bigint as records_valid,
+    records_rejected::bigint as records_rejected,
+    records_inserted::bigint as records_inserted,
+    records_updated::bigint as records_updated,
+    retry_count::int as retry_count,
+    source_file_count::int as source_file_count,
+    error_message
+from {{ source('landing', 'pipeline_runs') }}

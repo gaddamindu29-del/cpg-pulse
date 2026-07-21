@@ -1,0 +1,38 @@
+# dbt reads profiles.yml from ~/.dbt/profiles.yml by default, or from the
+# directory pointed to by $DBT_PROFILES_DIR. Copy this file there (or export
+# DBT_PROFILES_DIR=./dbt from the repo root) -- never commit a real
+# profiles.yml with credentials in it; this .example file uses env_var() for
+# every secret, matching .env.example's local-dev defaults.
+#
+#   cp dbt/profiles.yml.example ~/.dbt/profiles.yml
+#   # or:
+#   export DBT_PROFILES_DIR=./dbt   (and rename this file to profiles.yml locally)
+
+cpg_pulse:
+  target: local
+  outputs:
+    # Local target: the Postgres container from docker-compose.yml, standing
+    # in for Snowflake (docs/architecture.md section 7).
+    local:
+      type: postgres
+      host: "{{ env_var('WAREHOUSE_DB_HOST', 'localhost') }}"
+      port: "{{ env_var('WAREHOUSE_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('WAREHOUSE_DB_USER', 'cpgpulse') }}"
+      password: "{{ env_var('WAREHOUSE_DB_PASSWORD', 'cpgpulse_dev_password') }}"
+      dbname: "{{ env_var('WAREHOUSE_DB_NAME', 'cpg_pulse_warehouse') }}"
+      schema: marts
+      threads: 4
+
+    # Cloud target: real Snowflake. Not exercised in this environment (no
+    # Snowflake account configured) -- provided so the same dbt project is
+    # cloud-ready without code changes, only a `--target cloud` flag.
+    cloud:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'CPG_PULSE_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'CPG_PULSE_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'CPG_PULSE') }}"
+      schema: MARTS
+      threads: 8

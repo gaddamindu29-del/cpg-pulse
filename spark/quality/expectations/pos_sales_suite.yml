@@ -1,0 +1,60 @@
+# Data-quality suite for the standardized retail_pos_sales table.
+# Thresholds here are deliberately configuration, not code (docs/architecture.md
+# section 9), so a business user can retune "unreasonable price" or the
+# volume-anomaly tolerance without touching spark/quality/dq_engine.py.
+table: retail_pos_sales
+checks:
+  - name: retailer_id_not_null
+    category: NULL_CHECK
+    type: not_null
+    column: retailer_id
+
+  - name: product_id_not_null
+    category: NULL_CHECK
+    type: not_null
+    column: product_id
+
+  - name: transaction_date_not_null
+    category: NULL_CHECK
+    type: not_null
+    column: transaction_date
+
+  - name: units_sold_positive
+    category: RANGE_CHECK
+    type: min_value
+    column: units_sold
+    min: 1
+
+  - name: net_sales_non_negative
+    category: RANGE_CHECK
+    type: min_value
+    column: net_sales
+    min: 0
+
+  - name: selling_price_below_unreasonable_threshold
+    category: RANGE_CHECK
+    type: max_value
+    column: selling_price
+    max: 500
+
+  - name: sales_channel_accepted_values
+    category: ACCEPTED_VALUES
+    type: accepted_values
+    column: sales_channel
+    values: [IN_STORE, RETAILER_ONLINE, MARKETPLACE, DTC_ECOMMERCE]
+
+  - name: business_key_uniqueness
+    category: UNIQUENESS
+    type: unique_keys
+    columns: [retailer_id, store_id, retailer_product_id, transaction_date, sales_channel]
+
+  - name: freshness_within_3_days
+    category: FRESHNESS
+    type: freshness
+    date_column: transaction_date
+    max_lag_days: 3
+
+  - name: daily_volume_within_50pct_of_trailing_average
+    category: VOLUME_ANOMALY
+    type: volume_check
+    tolerance_pct: 50

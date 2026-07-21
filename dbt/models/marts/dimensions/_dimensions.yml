@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Date dimension. Grain: one row per calendar date."
+    columns:
+      - name: date_sk
+        tests: [unique, not_null]
+
+  - name: dim_retailer
+    description: "Retailer/banner dimension (SCD Type 1). Grain: one row per retailer."
+    columns:
+      - name: retailer_sk
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [unique, not_null]
+
+  - name: dim_distribution_center
+    description: "Distribution center dimension. Grain: one row per DC."
+    columns:
+      - name: distribution_center_sk
+        tests: [unique, not_null]
+
+  - name: dim_promotion
+    description: "Promotion dimension (SCD Type 1). Grain: one row per promotion."
+    columns:
+      - name: promotion_sk
+        tests: [unique, not_null]
+      - name: promotion_id
+        tests: [unique, not_null]
+
+  - name: dim_sales_channel
+    description: "Sales channel dimension, seeded static reference data. Grain: one row per channel."
+    columns:
+      - name: channel_sk
+        tests: [unique, not_null]
+
+  - name: dim_product
+    description: >
+      Product dimension, **SCD Type 2** (built from dbt/snapshots/dim_product_snapshot.sql).
+      Grain: one row per product per historical version.
+    columns:
+      - name: product_sk
+        tests: [unique, not_null]
+      - name: product_id
+        tests: [not_null]
+
+  - name: dim_store
+    description: >
+      Store dimension, **SCD Type 2** (built from dbt/snapshots/dim_store_snapshot.sql).
+      Grain: one row per store per historical version.
+    columns:
+      - name: store_sk
+        tests: [unique, not_null]
+      - name: store_id
+        tests: [not_null]
+
+  - name: dim_retailer_product_mapping
+    description: >
+      Retailer SKU -> canonical product_id dimension, **SCD Type 2** (natively,
+      from source-provided effective dates -- not a dbt snapshot; see the
+      model's own header comment for why). Grain: one row per
+      (retailer_id, retailer_product_id) per historical mapping version.
+    columns:
+      - name: retailer_product_mapping_sk
+        tests: [unique, not_null]

@@ -1,0 +1,6 @@
+distribution_center_id,dc_name,region
+DC-EAST-01,Eastern Regional DC,Northeast
+DC-SE-01,Southeast Regional DC,Southeast
+DC-MW-01,Midwest Regional DC,Midwest
+DC-SW-01,Southwest Regional DC,Southwest
+DC-WEST-01,Western Regional DC,West

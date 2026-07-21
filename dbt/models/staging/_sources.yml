@@ -1,0 +1,76 @@
+version: 2
+
+sources:
+  - name: landing
+    description: >
+      Data landed into the warehouse ahead of dbt (scripts/load_to_warehouse.py
+      in local dev; a Snowflake COPY INTO / Airflow "warehouse load" task in
+      cloud deployment -- see docs/architecture.md section 4 and the
+      "Snowflake Loading" DAG in the 12-DAG list). Staging models are the only
+      place these source tables are referenced directly.
+    schema: landing
+    tables:
+      - name: retailers
+        description: Retailer/banner reference data.
+        columns:
+          - name: retailer_id
+            tests: [unique, not_null]
+      - name: distribution_centers
+        description: Manufacturer distribution center reference data.
+        columns:
+          - name: distribution_center_id
+            tests: [unique, not_null]
+      - name: product_master
+        description: >
+          Internal ERP product master -- the canonical product identifier
+          space every retailer feed is mapped onto. Full-snapshot source (no
+          history); dbt/snapshots/dim_product_snapshot.sql builds SCD2 history
+          on top of this.
+        columns:
+          - name: product_id
+            tests: [unique, not_null]
+      - name: store_master
+        description: >
+          Store reference data across all retailers. Full-snapshot source;
+          dbt/snapshots/dim_store_snapshot.sql builds SCD2 history on top.
+        columns:
+          - name: store_id
+            tests: [unique, not_null]
+      - name: retailer_product_mapping
+        description: >
+          Retailer-specific product identifier -> canonical product_id, with
+          source-provided effective-dated history (already SCD2 at the
+          source -- see dbt/models/marts/dimensions/dim_retailer_product_mapping.sql).
+      - name: calendar
+        description: Date dimension source.
+        columns:
+          - name: date
+            tests: [unique, not_null]
+      - name: promotions
+        description: Promotion calendar (regular/promotional price, discount, spend).
+        columns:
+          - name: promotion_id
+            tests: [unique, not_null]
+      - name: retail_pos_sales
+        description: >
+          Retailer point-of-sale transactions, standardized and canonical-ID
+          resolved (spark/jobs/standardize_pos_sales.py in the real pipeline).
+      - name: retail_inventory
+        description: Retailer on-hand/available inventory snapshots, standardized.
+      - name: manufacturer_shipments
+        description: CPG Pulse's own shipments to retailer distribution centers.
+        columns:
+          - name: shipment_id
+            tests: [unique, not_null]
+      - name: ecommerce_orders
+        description: Direct-to-consumer e-commerce order lines.
+        columns:
+          - name: order_id
+            tests: [not_null]
+      - name: dq_results
+        description: >
+          Copied from pipeline_meta.dq_results in the metadata database (a
+          separate physical database from the warehouse) -- this is the
+          source for fact_data_quality_results.
+      - name: pipeline_runs
+        description: Copied from pipeline_meta.pipeline_runs; backs the /pipeline-runs API endpoint's warehouse-side view, if needed for historical reporting.

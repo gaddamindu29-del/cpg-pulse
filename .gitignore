@@ -1,0 +1,55 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+.venv-test/
+venv/
+
+# --- Generated / regenerable data (see scripts/generate_synthetic_data.py) ---
+# Full-scale synthetic data runs to ~1.5GB / thousands of partitioned files --
+# never commit it. data/sample/ holds a small, committed, representative subset.
+data/generated/
+data/quarantine/*
+!data/quarantine/.gitkeep
+# Local lake (raw/standardized/curated) written by ingestion/common/storage.py
+# and Spark jobs when run against the local filesystem backend, and the
+# schema-drift-detection state cache (ingestion/common/schema_check.py) --
+# both are runtime output, not source.
+data/lake/
+data/_schema_state/
+data/dq_reports/
+
+# --- Local dev environment state ---
+.env
+*.env.local
+minio-data/
+pgdata/
+airflow/logs/
+airflow/plugins/__pycache__/
+docker-compose.override.yml
+
+# --- dbt ---
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+# Local copy of profiles.yml.example used to point dbt at a real target --
+# never commit real connection info even though the template itself only
+# uses env_var() (see dbt/profiles.yml.example).
+dbt/profiles.yml
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Terraform ---
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.backup
+infrastructure/terraform/.terraform.lock.hcl

@@ -1,0 +1,2 @@
+retailer_id,store_id,retailer_product_id,transaction_date,units_sold,gross_sales,discount_amount,net_sales,regular_price,selling_price,sales_channel
+RTL-WMT,S-WMT-0003,WMT-808690,2025-02-24,4,23.08,0.0,23.08,5.77,5.77,IN_STORE

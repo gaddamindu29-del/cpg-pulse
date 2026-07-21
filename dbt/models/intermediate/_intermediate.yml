@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: int_daily_velocity
+    description: >
+      Trailing 14-day sell-through velocity per product x store, evaluated at
+      each inventory snapshot date, plus a prior-14-day comparison for trend
+      classification. Feeds mart_stockout_risk and mart_excess_inventory_risk.
+    columns:
+      - name: avg_daily_units_sold
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: int_product_daily_sales
+    description: "Unified retail POS + DTC e-commerce sales. Grain: product_id x sale_date x channel_type."
+
+  - name: int_promotion_baseline
+    description: >
+      Estimated pre-promotion baseline daily sell-through per promotion, used
+      by mart_promotion_effectiveness as the counterfactual-demand proxy.
+      This is an analytical estimate (average of comparable non-promotional
+      days), not a causal-inference model -- see the model's own header
+      comment and docs/metrics.md.
+    columns:
+      - name: promotion_id
+        tests: [unique]

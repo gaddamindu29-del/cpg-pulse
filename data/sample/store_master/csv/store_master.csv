@@ -1,0 +1,9 @@
+store_id,retailer_id,store_name,city,state,region,store_format,latitude,longitude,opening_date,closing_date
+S-WMT-0001,RTL-WMT,Supercenter #0001 - Newark,Newark,NJ,Northeast,Supercenter,40.79501,-74.07744,2019-04-07,
+S-WMT-0002,RTL-WMT,Supercenter #0002 - Denver,Denver,CO,West,Supercenter,39.75312,-105.10416,2019-08-10,
+S-WMT-0003,RTL-WMT,Supercenter #0003 - Chicago,Chicago,IL,Midwest,Supercenter,41.79081,-87.58876,2019-05-11,
+S-TGT-0004,RTL-TGT,General Merchandise #0004 - Albany,Albany,NY,Northeast,General Merchandise,42.79163,-73.61516,2019-02-04,
+S-TGT-0005,RTL-TGT,General Merchandise #0005 - Columbus,Columbus,OH,Midwest,General Merchandise,39.91051,-82.88813,2018-02-07,
+S-KRG-0006,RTL-KRG,Neighborhood Grocery #0006 - Orlando,Orlando,FL,Southeast,Neighborhood Grocery,28.65964,-81.449,2024-05-11,
+S-KRG-0007,RTL-KRG,Neighborhood Grocery #0007 - Albuquerque,Albuquerque,NM,Southwest,Neighborhood Grocery,35.19247,-106.65195,2021-01-29,
+S-AMZ-0008,RTL-AMZ,Online Fulfillment Center #0008 - Charlotte,Charlotte,NC,Southeast,Online Fulfillment Center,35.10273,-80.85464,2018-04-22,

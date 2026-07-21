@@ -1,0 +1,105 @@
+version: 2
+
+models:
+  - name: stg_retailers
+    description: One row per retailer/banner.
+    columns:
+      - name: retailer_id
+        tests: [unique, not_null]
+
+  - name: stg_distribution_centers
+    description: One row per manufacturer distribution center.
+    columns:
+      - name: distribution_center_id
+        tests: [unique, not_null]
+
+  - name: stg_product_master
+    description: One row per canonical product (current attributes only -- see dim_product for history).
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
+      - name: unit_cost
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+  - name: stg_store_master
+    description: One row per store (current attributes only -- see dim_store for history).
+    columns:
+      - name: store_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests:
+          - relationships:
+              to: ref('stg_retailers')
+              field: retailer_id
+
+  - name: stg_retailer_product_mapping
+    description: Retailer SKU -> canonical product_id, with effective-dated history.
+    columns:
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('stg_product_master')
+              field: product_id
+
+  - name: stg_calendar
+    description: One row per calendar date.
+    columns:
+      - name: date
+        tests: [unique, not_null]
+
+  - name: stg_promotions
+    description: One row per promotion.
+    columns:
+      - name: promotion_id
+        tests: [unique, not_null]
+      - name: start_date
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "<= end_date"
+
+  - name: stg_retail_pos_sales
+    description: >
+      Deduplicated, canonical-ID-resolved retail POS sales. Grain: retailer x
+      store x retailer_product x transaction_date x sales_channel.
+    columns:
+      - name: units_sold
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: sales_channel
+        tests:
+          - accepted_values:
+              values: ["IN_STORE", "RETAILER_ONLINE", "MARKETPLACE", "DTC_ECOMMERCE"]
+
+  - name: stg_retail_inventory
+    description: >
+      Deduplicated, canonical-ID-resolved retail inventory snapshots. Grain:
+      retailer x store x retailer_product x snapshot_date.
+    columns:
+      - name: on_hand_units
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: stg_manufacturer_shipments
+    description: One row per manufacturer shipment line to a retailer's distribution center.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: shipment_status
+        tests:
+          - accepted_values:
+              values: ["DELIVERED", "IN_TRANSIT", "DELAYED", "CANCELLED"]
+
+  - name: stg_ecommerce_orders
+    description: One row per direct-to-consumer order line.
+
+  - name: stg_dq_results
+    description: One row per data-quality check execution (mirrors pipeline_meta.dq_results).
+
+  - name: stg_pipeline_runs
+    description: One row per pipeline task execution (mirrors pipeline_meta.pipeline_runs).

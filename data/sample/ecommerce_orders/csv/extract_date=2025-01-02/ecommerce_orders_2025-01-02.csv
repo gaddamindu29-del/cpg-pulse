@@ -1,0 +1,4 @@
+order_id,order_date,customer_id,product_id,units_ordered,unit_price,discount_amount,net_sales,order_status,fulfillment_type,return_flag
+ORD-00000001,2025-01-01,CUST-0000232,P00002,1,5.05,0.0,5.05,DELIVERED,EXPEDITED_SHIP,False
+ORD-00000003,2025-01-01,CUST-0000137,P00008,1,1.86,0.0,1.86,DELIVERED,EXPEDITED_SHIP,False
+ORD-00000005,2025-01-01,CUST-0000362,P00011,1,7.76,0.0,7.76,PROCESSING,EXPEDITED_SHIP,False

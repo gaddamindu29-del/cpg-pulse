@@ -1,0 +1,2 @@
+retailer_id,store_id,retailer_product_id,transaction_date,units_sold,gross_sales,discount_amount,net_sales,regular_price,selling_price,sales_channel
+RTL-WMT,S-WMT-0001,WMT-871117,2025-02-15,31,290.47,57.97,232.5,9.37,7.5,RETAILER_ONLINE

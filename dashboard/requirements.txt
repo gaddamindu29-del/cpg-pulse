@@ -1,0 +1,5 @@
+# Slim, dashboard-only dependency set for the Docker image.
+streamlit==1.36.0
+plotly==5.22.0
+pandas==2.2.2
+requests==2.32.3

@@ -1,0 +1,2 @@
+shipment_id,retailer_id,distribution_center_id,product_id,shipment_date,units_shipped,shipment_status,estimated_delivery_date,actual_delivery_date
+SHP-0000155,RTL-KRG,DC-SE-01,P00005,2025-02-23,8,DELIVERED,2025-02-27,2025-02-26

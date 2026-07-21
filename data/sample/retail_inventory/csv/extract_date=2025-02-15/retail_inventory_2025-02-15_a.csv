@@ -1,0 +1,5 @@
+retailer_id,store_id,retailer_product_id,snapshot_date,on_hand_units,on_order_units,reserved_qty,available_units
+RTL-WMT,S-WMT-0001,WMT-871117,2025-02-14,37,164.0,2,35
+RTL-WMT,S-WMT-0003,WMT-871117,2025-02-14,56,,2,54
+RTL-KRG,S-KRG-0007,KRG-461104,2025-02-14,30,112.0,2,28
+RTL-AMZ,S-AMZ-0008,AMZ-594451,2025-02-14,0,62.0,0,0

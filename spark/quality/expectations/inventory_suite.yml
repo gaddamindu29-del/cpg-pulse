@@ -1,0 +1,35 @@
+# Data-quality suite for the standardized retail_inventory table.
+table: retail_inventory
+checks:
+  - name: on_hand_units_non_negative
+    category: RANGE_CHECK
+    type: min_value
+    column: on_hand_units
+    min: 0
+
+  - name: available_units_non_negative
+    category: RANGE_CHECK
+    type: min_value
+    column: available_units
+    min: 0
+
+  - name: snapshot_date_not_null
+    category: NULL_CHECK
+    type: not_null
+    column: snapshot_date
+
+  - name: business_key_uniqueness
+    category: UNIQUENESS
+    type: unique_keys
+    columns: [retailer_id, store_id, retailer_product_id, snapshot_date]
+
+  - name: freshness_within_10_days
+    category: FRESHNESS
+    type: freshness
+    date_column: snapshot_date
+    max_lag_days: 10
+
+  - name: weekly_volume_within_60pct_of_trailing_average
+    category: VOLUME_ANOMALY
+    type: volume_check
+    tolerance_pct: 60

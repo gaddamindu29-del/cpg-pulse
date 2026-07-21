@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: mart_stockout_risk
+    description: "Stockout risk classification. Grain: product_id x store_id x date."
+    columns:
+      - name: inventory_sk
+        tests: [unique, not_null]
+      - name: stockout_risk_level
+        tests:
+          - accepted_values:
+              values: ["HIGH", "MEDIUM", "LOW", "NO_RECENT_DEMAND"]
+
+  - name: mart_excess_inventory_risk
+    description: "Excess inventory risk classification. Grain: product_id x store_id x date."
+    columns:
+      - name: inventory_sk
+        tests: [unique, not_null]
+      - name: excess_inventory_risk_level
+        tests:
+          - accepted_values:
+              values: ["CRITICAL", "EXCESS", "NORMAL", "NO_RECENT_DEMAND"]
+
+  - name: mart_shipment_pos_reconciliation
+    description: "Manufacturer shipments vs. consumer POS sales. Grain: retailer_id x product_id x week_start."
+    columns:
+      - name: reconciliation_sk
+        tests: [unique, not_null]
+      - name: reconciliation_signal
+        tests:
+          - accepted_values:
+              values:
+                - "MISSING_SHIPMENT_DATA_OR_REPORTING_DELAY"
+                - "MISSING_POS_DATA_OR_REPORTING_DELAY"
+                - "SHIPMENTS_OUTPACING_SALES_INVENTORY_BUILDUP"
+                - "SALES_OUTPACING_SHIPMENTS_POTENTIAL_STOCKOUT"
+                - "ALIGNED"
+
+  - name: mart_promotion_effectiveness
+    description: >
+      Estimated promotion lift/ROI. Grain: one row per promotion. Analytical
+      estimate, not causal inference -- see the model's own header comment.
+    columns:
+      - name: promotion_sk
+        tests: [unique, not_null]
+
+  - name: mart_omnichannel_performance
+    description: "Sales by channel type over time. Grain: channel_type x sale_date."
+
+  - name: mart_retailer_scorecard
+    description: "Retailer-level KPI rollup. Grain: one row per retailer."
+    columns:
+      - name: retailer_sk
+        tests: [unique, not_null]
+
+  - name: mart_product_scorecard
+    description: "Product-level KPI rollup. Grain: one row per current product."
+    columns:
+      - name: product_sk
+        tests: [unique, not_null]
+
+  - name: mart_data_quality_summary
+    description: "Aggregated data-quality pass rates. Grain: table_name x check_category."

@@ -1,0 +1,3 @@
+shipment_id,retailer_id,distribution_center_id,product_id,shipment_date,units_shipped,shipment_status,estimated_delivery_date,actual_delivery_date
+SHP-0000204,RTL-AMZ,DC-SE-01,P00003,2025-02-16,83,IN_TRANSIT,2025-02-23,
+SHP-0000273,RTL-AMZ,DC-SE-01,P00012,2025-02-27,21,DELIVERED,2025-03-06,2025-03-08

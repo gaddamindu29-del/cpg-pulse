@@ -1,0 +1,6 @@
+retailer_id,store_id,retailer_product_id,transaction_date,units_sold,gross_sales,discount_amount,net_sales,regular_price,selling_price,sales_channel
+RTL-WMT,S-WMT-0002,WMT-190652,2025-02-22,2,4.36,0.0,4.36,2.18,2.18,IN_STORE
+RTL-WMT,S-WMT-0003,WMT-190652,2025-02-17,2,4.36,0.0,4.36,2.18,2.18,RETAILER_ONLINE
+RTL-TGT,S-TGT-0004,TGT-833452,2025-02-26,1,5.7,0.0,5.7,5.7,5.7,IN_STORE
+RTL-TGT,S-TGT-0005,TGT-286095,2025-02-14,35,312.9,62.65,250.25,8.94,7.15,
+RTL-AMZ,S-AMZ-0008,AMZ-587168,2025-02-15,10,41.8,0.0,41.8,4.18,4.18,MARKETPLACE

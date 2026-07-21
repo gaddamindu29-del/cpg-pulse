@@ -1,0 +1,2 @@
+retailer_id,store_id,retailer_product_id,transaction_date,units_sold,gross_sales,discount_amount,net_sales,regular_price,selling_price,sales_channel
+RTL-TGT,S-TGT-0004,TGT-292925,2025-02-22,8,48.0,9.6,38.4,6.0,4.8,IN_STORE
