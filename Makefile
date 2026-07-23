@@ -69,8 +69,17 @@ test-dq:
 lint:
 	ruff check scripts/ ingestion/ spark/ api/ dashboard/ tests/
 
+# Order matters: dim_product_snapshot/dim_store_snapshot select from the
+# staging models (ref('stg_product_master')/ref('stg_store_master')), not
+# the raw source, so staging must be built before `dbt snapshot` runs --
+# see docs/remaining_work.md architectural decision #2. Running plain
+# `dbt run` (or `dbt snapshot` before any `dbt run`) on a fresh database
+# fails with "relation staging.stg_store_master does not exist".
 dbt-run:
-	cd dbt && dbt run --target local
+	cd dbt && dbt seed --target local
+	cd dbt && dbt run --select staging --target local
+	cd dbt && dbt snapshot --target local
+	cd dbt && dbt run --exclude staging --target local
 
 dbt-test:
 	cd dbt && dbt test --target local

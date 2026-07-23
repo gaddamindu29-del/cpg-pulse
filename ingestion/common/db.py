@@ -16,7 +16,10 @@ import datetime as dt
 import os
 import uuid
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
+
+if TYPE_CHECKING:
+    import psycopg2
 
 
 def get_connection():

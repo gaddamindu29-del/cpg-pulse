@@ -1,0 +1,25 @@
+# Ruff configuration -- kept minimal and explicit so `ruff check` behaves the
+# same locally and in CI (.github/workflows/ci.yml) regardless of whatever
+# ruff version resolves defaults differently across releases.
+target-version = "py311"
+line-length = 160
+
+exclude = [
+    "dbt/target",
+    "dbt/dbt_packages",
+    ".venv",
+    ".venv-test",
+    "data",
+]
+
+[lint]
+# Pyflakes (F) catches real bugs (unused imports, undefined names, etc.).
+# Pycodestyle (E) is included but E501 (line-too-long) is deliberately
+# dropped -- several genuinely readable lines in this codebase (dense
+# pandas/SQL-builder chains, Streamlit chart calls) exceed 100 chars without
+# being less readable for it; enforcing a hard wrap would mean fighting the
+# linter instead of catching bugs. Not turning on stricter rule families
+# (import sorting, docstring conventions, etc.) for the same reason -- they'd
+# generate churn without catching real bugs on a project this size.
+select = ["E", "F"]
+ignore = ["E501"]

@@ -164,7 +164,17 @@ def run_ingestion(
                     storage.put_file("raw", key, str(f))
                     files_landed += 1
 
-                if cfg.partitioned and batch.extract_date:
+                # Backfills are explicit, out-of-band reprocessing of a
+                # specific historical range -- they must never move the
+                # watermark that governs normal incremental discovery
+                # (docs/architecture.md section 10). A regression test
+                # (tests/integration/test_ingestion.py) caught this: without
+                # the `not backfill_range` guard, backfilling an old date
+                # range after the pipeline had already advanced past it
+                # would silently move the watermark backward, causing the
+                # next normal run to rediscover and re-land everything in
+                # between.
+                if cfg.partitioned and batch.extract_date and not backfill_range:
                     db.set_watermark(conn, cfg.source_name, batch.extract_date, cfg.environment)
                 batches_landed += 1
                 conn.commit()

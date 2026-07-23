@@ -1,0 +1,193 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Fast feedback: lint doesn't need Postgres or the full dependency set,
+  # so it runs first and fails fast without waiting on the heavier jobs.
+  # ---------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install ruff==0.5.0
+      - run: ruff check scripts/ ingestion/ spark/ api/ dashboard/ tests/
+
+  # ---------------------------------------------------------------------
+  # Prevent committed secrets. Runs on the full history of the PR/push so
+  # a secret introduced and later removed in the same PR still gets caught.
+  # ---------------------------------------------------------------------
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------
+  # Unit + integration + API tests, and the dbt project, all against a
+  # real Postgres service container -- mirroring exactly how this project
+  # was validated locally (see docs/remaining_work.md section 3): land the
+  # committed data/sample/ dataset into the warehouse's `landing` schema via
+  # scripts/load_to_warehouse.py, then `dbt run`/`dbt test` build and verify
+  # the marts, then pytest exercises the ingestion engine, the DQ engine's
+  # non-Spark logic, and the API against that real, dbt-built warehouse.
+  #
+  # PySpark-dependent tests (tests/data_quality/test_dq_engine.py's
+  # TestCheckExecution class) are NOT special-cased here -- they run
+  # normally and either pass for real (Linux + pinned Python 3.11 avoids the
+  # Windows-only worker-crash issue documented in docs/remaining_work.md
+  # section 5) or skip themselves with a clear reason if this runner still
+  # can't execute a local Spark job for some other reason.
+  # ---------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cpgpulse
+          POSTGRES_PASSWORD: cpgpulse_ci_password
+          POSTGRES_DB: cpg_pulse_metadata
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      METADATA_DB_HOST: localhost
+      METADATA_DB_PORT: "5432"
+      METADATA_DB_NAME: cpg_pulse_metadata
+      METADATA_DB_USER: cpgpulse
+      METADATA_DB_PASSWORD: cpgpulse_ci_password
+      WAREHOUSE_DB_HOST: localhost
+      WAREHOUSE_DB_PORT: "5432"
+      WAREHOUSE_DB_NAME: cpg_pulse_warehouse
+      WAREHOUSE_DB_USER: cpgpulse
+      WAREHOUSE_DB_PASSWORD: cpgpulse_ci_password
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create warehouse database and apply metadata schema
+        run: |
+          python - <<'PYEOF'
+          import os
+          import psycopg2
+
+          conn = psycopg2.connect(
+              host=os.environ["METADATA_DB_HOST"], port=os.environ["METADATA_DB_PORT"],
+              dbname="postgres", user=os.environ["METADATA_DB_USER"], password=os.environ["METADATA_DB_PASSWORD"],
+          )
+          conn.autocommit = True  # CREATE DATABASE cannot run inside a transaction block
+          with conn.cursor() as cur:
+              cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (os.environ["WAREHOUSE_DB_NAME"],))
+              if cur.fetchone() is None:
+                  cur.execute(f'CREATE DATABASE {os.environ["WAREHOUSE_DB_NAME"]}')
+          conn.close()
+
+          meta_conn = psycopg2.connect(
+              host=os.environ["METADATA_DB_HOST"], port=os.environ["METADATA_DB_PORT"],
+              dbname=os.environ["METADATA_DB_NAME"], user=os.environ["METADATA_DB_USER"], password=os.environ["METADATA_DB_PASSWORD"],
+          )
+          with meta_conn.cursor() as cur:
+              cur.execute(open("warehouse/postgres/metadata_schema.sql").read())
+          meta_conn.commit()
+          meta_conn.close()
+          print("Databases ready.")
+          PYEOF
+
+      - name: Load committed sample data into the warehouse landing schema
+        run: python scripts/load_to_warehouse.py --generated-dir data/sample
+
+      # Order matters: dbt/snapshots/dim_product_snapshot.sql and
+      # dim_store_snapshot.sql select from ref('stg_product_master') /
+      # ref('stg_store_master') (staging *models*, not the raw source --
+      # see docs/remaining_work.md architectural decision #2), so those
+      # staging views must exist before `dbt snapshot` runs. `dbt snapshot`
+      # before `dbt run` (the sequence this project's own docs originally
+      # described) fails with "relation staging.stg_store_master does not
+      # exist" -- caught by actually dry-running this workflow's steps
+      # locally against a from-scratch database before trusting it in CI.
+      - name: dbt deps / seed
+        working-directory: dbt
+        run: |
+          cp profiles.yml.example profiles.yml
+          dbt deps
+          dbt seed
+      - name: dbt run staging (snapshots depend on it)
+        working-directory: dbt
+        run: dbt run --select staging
+      - name: dbt snapshot
+        working-directory: dbt
+        run: dbt snapshot
+      - name: dbt run remaining models (intermediate + marts)
+        working-directory: dbt
+        run: dbt run --exclude staging
+      - name: dbt test
+        working-directory: dbt
+        run: dbt test
+
+      - name: Run Python test suite (unit, integration, data-quality, API)
+        run: pytest tests/ api/tests/ -v
+
+  # ---------------------------------------------------------------------
+  # Build-only (no push): confirms every Dockerfile in the repo actually
+  # builds. This is what docker-compose.yml's `api`/`dashboard`/`airflow`
+  # services build from -- see docs/checklist.md for why the full
+  # `docker compose up` stack itself was never run in this project's
+  # development environment (no Docker daemon available there).
+  # ---------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: api/Dockerfile
+          push: false
+          tags: cpg-pulse-api:ci
+      - name: Build dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dashboard/Dockerfile
+          push: false
+          tags: cpg-pulse-dashboard:ci
+      - name: Build airflow image
+        uses: docker/build-push-action@v6
+        with:
+          context: airflow
+          file: airflow/Dockerfile
+          push: false
+          tags: cpg-pulse-airflow:ci

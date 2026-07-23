@@ -80,7 +80,7 @@ services:
       - cpg-pulse
 
   minio-init:
-    image: minio/mc:RELEASE.2024-06-13T22-53-53Z
+    image: minio/mc:latest
     container_name: cpg-pulse-minio-init
     depends_on:
       minio:

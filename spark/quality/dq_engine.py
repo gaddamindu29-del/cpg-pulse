@@ -31,7 +31,6 @@ import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import yaml
 from pyspark.sql import DataFrame
@@ -148,7 +147,7 @@ def write_report(suite_name: str, results: list[CheckResult], output_dir: str = 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     report = {
         "suite": suite_name,
-        "generated_at": dt.datetime.utcnow().isoformat(),
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "pass_rate": round(sum(r.passed for r in results) / len(results), 4) if results else None,
         "checks": [r.__dict__ for r in results],
     }

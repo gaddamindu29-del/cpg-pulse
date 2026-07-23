@@ -19,8 +19,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from data_gen import ecommerce, pricing, promotions as promo_mod, quality_issues, reference, simulate, writers
-from data_gen.config import GeneratorConfig
+from data_gen import ecommerce, pricing, promotions as promo_mod, quality_issues, reference, simulate, writers  # noqa: E402
+from data_gen.config import GeneratorConfig  # noqa: E402
 
 
 @pytest.fixture(scope="module")

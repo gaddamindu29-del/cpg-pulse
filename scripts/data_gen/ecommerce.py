@@ -10,9 +10,7 @@ internal Shopify/Salesforce Commerce order database).
 
 from __future__ import annotations
 
-import datetime as dt
 
-import numpy as np
 import pandas as pd
 
 from .config import GeneratorConfig

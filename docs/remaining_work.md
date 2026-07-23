@@ -122,8 +122,17 @@ cd dbt
 export DBT_PROFILES_DIR=$(pwd)   # profiles.yml.example must be copied to profiles.yml locally (gitignored)
 dbt deps
 dbt seed
+# Order matters: dbt snapshot BEFORE dbt run fails on a fresh database --
+# the snapshots select from ref('stg_product_master')/ref('stg_store_master'),
+# not the raw source (architectural decision #2 below), so staging must be
+# built first. This exact bug was caught in the Phase 9 session by dry-running
+# this sequence against a from-scratch database before trusting it in CI --
+# an earlier version of this doc (and the CI workflow) had `dbt snapshot`
+# before `dbt run` and failed with "relation staging.stg_store_master does
+# not exist". Also fixed in `make dbt-run` (Makefile) and .github/workflows/ci.yml.
+dbt run --select staging
 dbt snapshot
-dbt run
+dbt run --exclude staging
 dbt test                                                          # 89 tests, all passing
 dbt docs generate                                                 # confirmed clean, 2 exposures recognized
 

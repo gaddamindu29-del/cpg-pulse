@@ -10,7 +10,7 @@ parameters (never string-formatted SQL) -- see docs/architecture.md section
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
