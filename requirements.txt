@@ -25,7 +25,13 @@ requests==2.32.3
 python-dotenv==1.0.1
 
 # --- Orchestration ---
-apache-airflow==2.9.2
+# apache-airflow is deliberately NOT installed here -- it's fundamentally
+# incompatible with SQLAlchemy==2.0.31 above (Airflow 2.9.2 requires
+# sqlalchemy<2.0,>=1.4.36, an unresolvable pip conflict when both are pinned
+# in the same environment). Nothing outside airflow/ imports the `airflow`
+# package; Airflow only ever runs inside its own Docker image, which has its
+# own separate airflow/requirements-airflow.txt built against Airflow's
+# official --constraint file instead of arbitrary pins. See docs/runbook.md.
 
 # --- Testing & quality ---
 pytest==8.2.2
