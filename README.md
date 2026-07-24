@@ -60,16 +60,16 @@ flowchart LR
     end
 
     subgraph LAKE["Data Lake"]
-        RAW[(Raw\nbyte-exact copy)]
-        STD[(Standardized\ncanonical IDs)]
-        CUR[(Curated\nDQ-checked)]
-        QTN[(Quarantine)]
+        RAW[("Raw<br/>byte-exact copy")]
+        STD[("Standardized<br/>canonical IDs")]
+        CUR[("Curated<br/>DQ-checked")]
+        QTN[("Quarantine")]
     end
 
     subgraph WH["Warehouse (dbt)"]
         STG[staging]
-        SNAP[snapshots\nSCD2]
-        MART[marts\nfacts + dims + analytics]
+        SNAP["snapshots<br/>SCD2"]
+        MART["marts<br/>facts + dims + analytics"]
     end
 
     subgraph SERVE["Serving"]
