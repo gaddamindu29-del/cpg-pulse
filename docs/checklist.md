@@ -142,6 +142,62 @@ Phases 8, 9, and 10 in one continuous session:
 - **Phase 10**: All 6 remaining docs written, cross-referenced, and grounded in real (not invented) numbers throughout.
 - Also cleaned up: `ruff.toml` added, all lint findings resolved (some auto-fixed, two `psycopg2` forward-reference typing issues fixed properly via `TYPE_CHECKING`).
 
+## Session Summary (2026-07-24 Docker/PySpark validation)
+Docker became available for the first time in this project's development
+history. Used it to validate everything that had previously been
+documented-but-untested: `docker compose up` end-to-end, and — the central
+open question of the whole project — whether PySpark actually works once it
+has a real Linux runtime (it never could on the Windows dev host).
+
+- **`make up` run for real, first time ever.** Found and fixed 3 real bugs
+  getting there: an `apt-get` flag typo, pinned-package conflicts with
+  Airflow's `--constraint` file, and — the big one — the Airflow image
+  shipped with no JDK and no `pyspark` at all, despite the whole project
+  being designed around "run Spark jobs in this container." Fixed
+  `airflow/Dockerfile` (added `default-jdk-headless` + `JAVA_HOME`) and
+  `airflow/requirements-airflow.txt` (unpinned conflicting packages, added
+  PySpark). See `docs/runbook.md` §1.
+- **PySpark confirmed working for real, first time ever.** Ran
+  `standardize_pos_sales.py`, `standardize_inventory.py`, and
+  `run_quality_checks.py` (both sources) inside the Docker
+  `airflow-scheduler` container against the **full** generated dataset —
+  3,854,199 raw POS rows and 582,777 raw inventory rows, not a sample.
+  Produced 3,761,605 / 575,312 valid rows respectively, correctly
+  quarantining the rest by documented business rule. This resolves the
+  Windows-only Python-worker-crash limitation for the intended deployment
+  target (Docker/Linux); Windows remains unsupported for direct execution.
+- **Full pipeline run end-to-end through Docker Compose for the first
+  time**: ingestion (all 9 sources) → real PySpark standardization → real DQ
+  engine → warehouse load → dbt (seed/staging/snapshot/rest/test, all green,
+  89/89 dbt tests passing) → API (`/sales/summary`, `/products`,
+  `/data-quality/latest` all returning real data) → dashboard (Playwright
+  screenshot confirms $73.9M total net sales, 17.16M units sold, real
+  per-retailer and per-channel charts rendering correctly).
+- **Two real bugs found and fixed in `scripts/load_to_warehouse.py`** while
+  doing this: (1) an OOM — loading 3.76M curated rows via one
+  `pd.read_parquet()` + `to_sql()` call OOM-killed the container; fixed by
+  streaming the curated Parquet directory in batches via `pyarrow.dataset`.
+  (2) That fix itself then silently dropped the Hive-partition date column
+  (`transaction_date`/`snapshot_date`), because `pyarrow.dataset.dataset()`
+  doesn't reconstruct Hive-partitioned columns unless told
+  `partitioning="hive"` (`pd.read_parquet()` does this automatically, which
+  is why the original, OOM-prone code never hit it). Caught because `dbt
+  run` failed with "column does not exist" against a table that had just
+  "successfully" loaded 3.76M rows — a reminder that a clean load with no
+  errors doesn't prove the data is correct. See `docs/runbook.md` §5.
+- **Near-miss**: ran `pytest tests/ api/tests/` against the just-populated
+  `data/lake` without remembering that `tests/integration/test_ingestion.py`
+  uses a `clean_lake_state` fixture that `shutil.rmtree`s it. Caught and
+  killed mid-delete (only `data/lake/curated/` was partially wiped;
+  `raw/`/`standardized/` were untouched); recovered by re-running the DQ
+  engine (which derives `curated/` from `standardized/`). Full pytest suite
+  (204 tests) then re-run excluding that one file: 103 applicable tests
+  passed, 5 skipped (Spark-on-Windows-host, expected), 0 failed. Documented
+  the hazard in `docs/runbook.md` §8 so it isn't repeated.
+- Full validation trail (`docker top`, `docker stats`, `docker inspect`,
+  `docker compose logs`) used throughout to confirm real work was happening
+  and to diagnose the OOM — not just trusting exit codes.
+
 ## Known limitations (tracked, not silently ignored)
 - No live AWS/Snowflake deployment in this environment (by design — see architecture.md §7)
 - Great Expectations replaced by a lightweight in-house expectation runner (dependency-weight tradeoff, documented in architecture.md §6)

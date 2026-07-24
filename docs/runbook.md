@@ -16,12 +16,44 @@ make up         # docker compose up -d --build: Postgres, MinIO, Airflow
 make seed       # apply metadata schema + create MinIO buckets (idempotent)
 ```
 
-`make up` was validated via `docker compose config` (schema/interpolation
-correctness) but never actually run end-to-end in this project's development
-environment — no Docker daemon was available. First time you run it for
-real, watch `docker compose logs -f` through Airflow's `airflow-init` step;
-if it hangs, check `airflow-init`'s logs specifically (it runs `airflow db
-migrate` + creates the admin user, and is the slowest first-boot step).
+`make up` **has been run end-to-end for real** (Postgres, MinIO, Airflow
+init/scheduler/webserver, API, dashboard all confirmed healthy), after fixing
+three real bugs the first time a Docker daemon was actually available to
+build against:
+
+1. `airflow/Dockerfile` had a typo: `--no-install-recursive` isn't a valid
+   `apt-get` flag (should be `--no-install-recommends`).
+2. `airflow/requirements-airflow.txt` pinned `boto3`/`pandas`/`pyarrow`/
+   `psycopg2-binary` to versions that conflict with Airflow's own pinned
+   `--constraint` file (`pip install --constraint` hard-fails, not warns, on
+   any conflict). Fixed by unpinning all four and letting the constraints
+   file win, since they're all in Airflow's own dependency closure anyway.
+3. The image shipped with **no JDK and no `pyspark` at all** — the "run Spark
+   jobs inside this container" plan was documented throughout the project but
+   never actually implemented at the Dockerfile level, since no Docker daemon
+   existed to catch the gap until now. Fixed by adding `default-jdk-headless`
+   + `JAVA_HOME`/`PATH` to `airflow/Dockerfile`, and `PyYAML` + unpinned
+   `pyspark` to `airflow/requirements-airflow.txt`. See §4 for the resulting
+   PySpark validation.
+
+`docker-compose.yml`'s Postgres port is `${POSTGRES_HOST_PORT:-5432}` rather
+than a bare `5432:5432` — a real conflict was hit locally against a
+pre-existing host Postgres on the default port (two processes bound to 5432
+simultaneously per `netstat`). Set `POSTGRES_HOST_PORT` in `.env` if you have
+the same issue; service-to-service traffic inside the Docker network always
+uses `postgres:5432` regardless of this value. Note also: `docker compose`
+merges `ports:` lists **across** compose files (including override files)
+rather than replacing them — an override file that only changes the host
+port will leave the base file's mapping active too, which is a real risk if
+that base mapping collides with something already running on your host.
+
+If Airflow's `airflow-init` step hangs, check its logs specifically (it runs
+`airflow db migrate` + creates the admin user, and is the slowest first-boot
+step). Note that `airflow-init`, `airflow-scheduler`, and `airflow-webserver`
+each build their **own** separate image from the same `airflow/Dockerfile`
+(no explicit `image:` name in `docker-compose.yml` means Compose tags them
+per-service) — after changing the Dockerfile or its requirements file, run
+`docker compose build` for all three, not just the one you're about to use.
 
 ## 2. Generating Data
 
@@ -75,26 +107,30 @@ python spark/jobs/run_quality_checks.py --source retail_pos_sales
 python spark/jobs/run_quality_checks.py --source retail_inventory
 ```
 
-**⚠️ Environment-dependent.** These were never executed in this project's
-Windows development environment — Spark 3.5.1's Python worker process
-crashes under Python 3.12 on Windows regardless of JDK version (17 and 23
-both tried, both fail identically with `EOFException` / "Python worker
-exited unexpectedly"). This is a known class of Windows-native PySpark
-friction, not a defect in the job code (which uses standard, well-established
-PySpark DataFrame APIs, and was validated by 5 dedicated tests in
-`tests/data_quality/test_dq_engine.py` that will run for real wherever Spark
-actually works). **Run these inside the Docker `airflow` container**
-(Linux, Python 3.11, pinned Java) — that's the first thing to try if you hit
-the same error signature:
+**⚠️ Environment-dependent — but now confirmed working.** These cannot run in
+this project's Windows development environment directly — Spark 3.5.1's
+Python worker process crashes under Python 3.12 on Windows regardless of JDK
+version (17 and 23 both tried, both fail identically with `EOFException` /
+"Python worker exited unexpectedly"). This is a known class of Windows-native
+PySpark friction, not a defect in the job code. **Run these inside the
+Docker `airflow-scheduler` container** (Linux, Python 3.11, `default-jdk-headless`)
+— confirmed working for real: all four jobs above were run against the full
+generated dataset (3,854,199 raw POS rows / 582,777 raw inventory rows),
+producing 3,761,605 / 575,312 valid standardized+curated rows respectively,
+with the rest correctly quarantined by business rule. The Docker image
+originally shipped with *no* JDK and no `pyspark` at all — `airflow/Dockerfile`
+had to be fixed to add `default-jdk-headless` + `JAVA_HOME`, and
+`airflow/requirements-airflow.txt` to unpin `pyspark` (see §8 below) before
+any of this worked. If you hit the Windows crash signature on Linux too:
 
 ```
 py4j.protocol.Py4JJavaError: ... Python worker exited unexpectedly (crashed)
 Caused by: java.io.EOFException
 ```
 
-If you see this on Linux too, check `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON`
-point at a real interpreter (not a Windows Store shim — irrelevant on Linux,
-but the same class of "wrong Python resolved" issue can happen with venvs).
+check `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON` point at a real interpreter —
+the same class of "wrong Python resolved" issue can happen with venvs even on
+Linux.
 
 Only `standardize_pos_sales.py` and `standardize_inventory.py` exist —
 shipments/promotions/ecommerce standardization jobs were never built (see
@@ -127,6 +163,33 @@ function.
 on top of the `landing` tables will fail with `DependentObjectsStillExist`
 unless the loader does a `DROP TABLE ... CASCADE` first. Already fixed
 (`_replace_table()`) — don't revert to a plain `df.to_sql(if_exists='replace')`.
+
+**Real bug (found during Docker validation) #1 — OOM on the full dataset**:
+loading `retail_pos_sales`'s curated layer (3.76M rows across 8k+ Parquet
+files) via a single `pd.read_parquet(curated_path)` + one unbounded `to_sql()`
+call OOM-killed the Docker container outright (`docker inspect` showed
+`OOMKilled: true`; the Python process itself vanished mid-run with no
+traceback — nothing in `stdout`/`stderr`, just silently gone). Small/sample
+datasets never hit this. Fixed by streaming the curated directory in
+row-batches via `pyarrow.dataset` (`_iter_curated_batches()` /
+`_replace_table_streamed()`) instead of materializing the whole table in
+memory at once.
+
+**Real bug (found during Docker validation) #2 — the streaming fix silently
+dropped the date column**: `spark/jobs/run_quality_checks.py` writes curated
+output with `.partitionBy(date_col)`, which — standard Spark/Hive behavior —
+removes that column from the Parquet files themselves and encodes it only in
+the directory names (`transaction_date=2025-01-01/...`). `pd.read_parquet(dir)`
+reconstructs it automatically; the lower-level `pyarrow.dataset.dataset()`
+used by the streaming fix above does **not**, unless told
+`partitioning="hive"`. Without it, `landing.retail_pos_sales` loaded
+successfully (no error) but silently had no `transaction_date` column at
+all — caught when `dbt run` failed with `column "transaction_date" does not
+exist` against a table that had just "successfully" loaded 3.76M rows. Fixed
+by passing `partitioning="hive"` to `ds.dataset()`. **Lesson**: a clean load
+with no errors doesn't prove the data is correct — always spot-check the
+resulting schema/row content, not just the row count, especially after
+touching the read path for partitioned Parquet.
 
 ## 6. Running dbt
 
@@ -194,7 +257,24 @@ Full count: **204 tests, 199 passing + 5 documented Spark skips** as of this
 writing (see `docs/checklist.md` Phase 8 for the full breakdown). None
 require mocking the database for anything that's actually SQL/warehouse
 behavior — `tests/conftest.py::warehouse_engine` skips cleanly (not
-falsely-green) if no database is reachable.
+falsely-green) if no database is reachable. The 5 Spark skips run for real
+inside Docker (see §4) but still skip on a bare host with no working Spark.
+
+**⚠️ Never run `tests/integration/test_ingestion.py` against a working
+directory that holds real pipeline output you care about.** Its
+`clean_lake_state` fixture does `shutil.rmtree(data/lake)` before *and*
+after each test — correct behavior for a test fixture (each test needs a
+clean slate), but a real near-miss happened during Docker validation: `pytest
+tests/ api/tests/` was launched against a `data/lake` that had just taken
+several hours of real Spark processing to produce, and the rmtree was
+mid-flight (partially deleted `data/lake/curated/`) when it was caught and
+killed. Recovered by re-running `spark/jobs/run_quality_checks.py` for both
+sources, since `data/lake/standardized/` — its real source — was untouched
+(only `curated/` is derived+overwritten by that job, so this is always safe
+to redo). If you need to run the full suite against a directory with real
+data in it, run everything except this one file first
+(`--ignore=tests/integration/test_ingestion.py`), and only run that file
+against a disposable/scratch checkout.
 
 ## 9. Backfilling
 

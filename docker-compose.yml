@@ -46,7 +46,12 @@ services:
       POSTGRES_PASSWORD: ${METADATA_DB_PASSWORD:-cpgpulse_dev_password}
       POSTGRES_DB: ${METADATA_DB_NAME:-cpg_pulse_metadata}
     ports:
-      - "5432:5432"
+      # Host port is configurable (POSTGRES_HOST_PORT) so this doesn't collide
+      # with a pre-existing local Postgres install on the default port --
+      # a real conflict hit during local validation (see docs/runbook.md).
+      # Service-to-service traffic inside the Docker network always uses
+      # `postgres:5432` regardless of this value.
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infrastructure/postgres-init:/docker-entrypoint-initdb.d

@@ -5,6 +5,15 @@ session hit its token limit — Phases 8-10 were **not started**. This document
 is the continuation brief for whoever (human or a new Claude Code session)
 picks this up next.
 
+> **Update (2026-07-24): this document is a frozen point-in-time snapshot —
+> its Docker/PySpark-untested claims below are now outdated.** Phases 8-10
+> were completed in the next session, and a later session (once Docker
+> actually became available) ran `docker compose up` end-to-end and
+> confirmed PySpark genuinely works on the Linux/Docker runtime it was always
+> designed for — see `docs/checklist.md`'s "Session Summary (2026-07-24
+> Docker/PySpark validation)" section and `docs/runbook.md` §1/§4/§5 for the
+> current, accurate status. Left unedited below for historical accuracy.
+
 ## 1. Exact Current Status
 
 Phases 1-7 are **complete and live-validated** (not just written — actually

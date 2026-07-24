@@ -115,7 +115,48 @@ def _replace_table(df: pd.DataFrame, table: str, engine, schema: str = "landing"
 
     with engine.begin() as conn:
         conn.execute(text(f'DROP TABLE IF EXISTS "{schema}"."{table}" CASCADE'))
-    df.to_sql(table, engine, schema=schema, if_exists="append", index=False)
+    df.to_sql(table, engine, schema=schema, if_exists="append", index=False, chunksize=50_000)
+
+
+def _iter_curated_batches(curated_path: Path, batch_rows: int = 200_000):
+    """Stream a curated Parquet directory in row batches via pyarrow's dataset
+    API instead of `pd.read_parquet(dir)`, which materializes every file into
+    one pandas DataFrame at once. For retail_pos_sales (3.76M rows / 8k+ files)
+    that single-shot read+to_sql OOM-killed the container during real Docker
+    validation -- streaming keeps peak memory bounded to one batch regardless
+    of how many curated files/rows exist.
+
+    `partitioning="hive"` is required here: spark/jobs/run_quality_checks.py
+    writes curated output with `.partitionBy(date_col)`, which -- standard
+    Hive/Spark behavior -- drops the partition column from the Parquet files
+    themselves and encodes it only in the directory names (e.g.
+    `transaction_date=2025-01-01/part-...parquet`). `pd.read_parquet(dir)`
+    reconstructs that column automatically; pyarrow's lower-level
+    `ds.dataset()` only does so if told the layout is Hive-partitioned.
+    Without this, the loaded landing table silently loses its date column --
+    caught for real when `dbt run` failed with "column transaction_date does
+    not exist" against a table that had just loaded 3.76M rows successfully.
+    """
+    import pyarrow.dataset as ds
+
+    dataset = ds.dataset(str(curated_path), format="parquet", partitioning="hive")
+    for batch in dataset.to_batches(batch_size=batch_rows):
+        yield batch.to_pandas()
+
+
+def _replace_table_streamed(batches, table: str, engine, schema: str = "landing") -> int:
+    """Same drop+reload contract as `_replace_table`, but consumes an iterable
+    of DataFrame batches so the caller never holds the full table in memory.
+    """
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(f'DROP TABLE IF EXISTS "{schema}"."{table}" CASCADE'))
+    total = 0
+    for batch_df in batches:
+        batch_df.to_sql(table, engine, schema=schema, if_exists="append", index=False, chunksize=50_000)
+        total += len(batch_df)
+    return total
 
 
 def _read_any_format(root: Path) -> pd.DataFrame:
@@ -202,8 +243,8 @@ def load_transactional_tables(generated_dir: str, engine) -> None:
     for source in TRANSACTIONAL_SOURCES:
         curated_path = Path("data/lake/curated") / source
         if curated_path.exists():
-            df = pd.read_parquet(curated_path)
-            logger.info("[%s] loaded from real curated layer: %d rows", source, len(df))
+            row_count = _replace_table_streamed(_iter_curated_batches(curated_path), source, engine)
+            logger.info("[%s] loaded from real curated layer (streamed): %d rows", source, row_count)
         else:
             raw_root = Path(generated_dir) / source
             if not raw_root.exists():
@@ -212,8 +253,7 @@ def load_transactional_tables(generated_dir: str, engine) -> None:
             raw_df = _read_any_format(raw_root)
             df = _fallback_standardize(source, raw_df, mapping_df)
             logger.info("[%s] loaded via local-dev fallback standardize: %d rows", source, len(df))
-
-        _replace_table(df, source, engine)
+            _replace_table(df, source, engine)
 
 
 def load_pipeline_metadata(engine, meta_engine) -> None:

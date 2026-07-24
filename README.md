@@ -155,17 +155,26 @@ cd dbt && dbt test             # 89 dbt tests
 ```
 
 **204 tests total: 199 passing, 5 honestly skipped** with a documented reason
-(PySpark can't execute a job on this project's Windows development host —
-see Known Limitations below) rather than mocked or silently omitted. See
-`docs/checklist.md` Phase 8 for the full breakdown, including two real bugs
-that were found and fixed *by* writing these tests (not just found ahead of
-time and tested around):
+(the 5 require a live Spark job execution; they run for real inside the
+Docker Compose `airflow-scheduler` container — confirmed, see Known
+Limitations below — but skip on a bare Windows host, which has no working
+JVM/PySpark path) rather than mocked or silently omitted. See
+`docs/checklist.md` Phase 8 for the full breakdown, including real bugs that
+were found and fixed *by* writing these tests and by live Docker validation
+(not just found ahead of time and tested around):
 
 1. A backfill for an old date range was silently regressing the ingestion
    watermark backward — fixed in `ingestion/common/base_ingest.py`.
 2. `dbt snapshot` run before `dbt run` fails on a fresh database (the SCD2
    snapshots read from staging models, which must exist first) — fixed in
    the CI workflow, `Makefile`, and this project's own docs.
+3. `scripts/load_to_warehouse.py` OOM-killed its container loading 3.76M
+   curated rows via a single `pd.read_parquet()` + `to_sql()` call — fixed by
+   streaming the curated Parquet directory in batches via `pyarrow.dataset`.
+4. That streaming fix initially dropped the Hive-partition date column
+   (`transaction_date`/`snapshot_date`) that Spark's `partitionBy()` write
+   encodes only in directory names — fixed by passing `partitioning="hive"`
+   to the `pyarrow.dataset` reader. See `docs/runbook.md` §5 for both.
 
 ---
 
@@ -219,13 +228,24 @@ here.
 Stated plainly, not glossed over — see `docs/remaining_work.md` §5 for the
 full detail behind each:
 
-- **PySpark jobs were never executed** on this project's Windows/Python 3.12
-  development host (a documented worker-process crash, not a code defect).
-  They're code-reviewed, use standard PySpark APIs, and have dedicated tests
-  that will run for real on Linux/Docker.
-- **`docker compose up` was never run end-to-end** — validated via
-  `docker compose config` only, no Docker daemon was available in this
-  development environment.
+- **PySpark cannot execute a job on this project's Windows/Python 3.12
+  development host** (a documented worker-process crash, not a code defect).
+  This is now fully resolved for the intended deployment target: the same
+  jobs (`standardize_pos_sales.py`, `standardize_inventory.py`,
+  `run_quality_checks.py`) were run for real inside the Docker Compose
+  `airflow-scheduler` container (Debian + `default-jdk-headless`) against the
+  full 3.85M-row/582K-row generated dataset, with real output validated at
+  every layer (standardized → curated → warehouse → dbt marts → API →
+  dashboard). Windows remains unsupported for direct (non-Docker) Spark
+  execution; Docker is the supported path, and it works.
+- **`docker compose up` has been run end-to-end**, including a full pipeline
+  run through it (ingestion → PySpark standardization → DQ → warehouse load
+  → dbt → API → dashboard, all with real data, dashboard screenshot showing
+  $73.9M net sales). Three real bugs were found and fixed doing this: two
+  `airflow/Dockerfile`/`requirements-airflow.txt` issues (missing JDK, and
+  pinned-package conflicts with Airflow's constraints file) and the
+  `load_to_warehouse.py` OOM + Hive-partitioning bugs above — see
+  `docs/runbook.md` §1 and §5.
 - **Airflow DAG files don't exist yet** — orchestration is designed for
   (docstrings reference `dag_id`s, `docker-compose.yml` provisions the
   Airflow containers) but the actual DAG Python files were never written.

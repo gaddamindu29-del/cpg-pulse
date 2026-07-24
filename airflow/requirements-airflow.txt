@@ -6,9 +6,30 @@
 # deliberately NOT used -- its dependency footprint conflicts with this image's
 # pinned Airflow constraints file. spark/quality/ implements an equivalent
 # expectation-suite pattern in-house instead (see docs/architecture.md section 6).
-boto3==1.34.131
-pandas==2.2.2
-pyarrow==16.1.0
-psycopg2-binary==2.9.9
+#
+# boto3/pandas/pyarrow/psycopg2-binary are deliberately UNPINNED here (unlike
+# the top-level requirements.txt, which does pin them): they're all part of
+# Airflow's own dependency closure, and Airflow 2.9.2's constraints file pins
+# each to a specific version (boto3==1.34.106, pandas==2.1.4, etc.) that's
+# older than what the rest of this project uses. `pip install --constraint`
+# fails outright -- not a soft warning -- if a directly-requested package's
+# pin conflicts with the constraint. Caught for real, one package at a time,
+# the first time this Dockerfile was actually built (Docker wasn't available
+# earlier in this project's development) -- unpinning lets the constraint
+# file's version win for anything Airflow itself depends on, while
+# dbt-core/dbt-postgres (not part of Airflow's own dependency tree) keep
+# their explicit pins with no conflict.
+boto3
+pandas
+pyarrow
+psycopg2-binary
 dbt-core==1.8.3
 dbt-postgres==1.8.2
+PyYAML==6.0.1
+
+# pyspark: unpinned like the packages above -- Airflow 2.9.2's constraints
+# file doesn't happen to pin pyspark itself, but pins several of pyspark's
+# own transitive dependencies, so letting pip resolve freely against the
+# constraint file (rather than forcing requirements.txt's 3.5.1) avoids the
+# same class of conflict documented above.
+pyspark
