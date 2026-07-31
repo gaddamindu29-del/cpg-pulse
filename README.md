@@ -2,9 +2,9 @@
 
 **Omnichannel Sales, Inventory, and Promotion Intelligence Platform for a fictional CPG manufacturer.**
 
-An end-to-end data engineering platform — synthetic data generation, batch
+An end-to-end data engineering platform - synthetic data generation, batch
 ingestion, PySpark standardization, a dimensional warehouse built with dbt,
-a FastAPI service, and a Streamlit dashboard — built to demonstrate
+a FastAPI service, and a Streamlit dashboard - built to demonstrate
 production-style data engineering practice, not a toy ETL script.
 
 > **This project's data, company, and retailers are entirely fictional.**
@@ -23,13 +23,13 @@ tracks manufacturer shipments and owns the authoritative product master.
 
 Because there's no shared identifier space and no shared data model across
 these sources, Sales, Supply Chain, and Category Management teams can't
-answer basic questions — "are we in stock at this store?", "did last month's
-promotion actually work?" — without manual, spreadsheet-based reconciliation.
+answer basic questions - "are we in stock at this store?", "did last month's
+promotion actually work?" - without manual, spreadsheet-based reconciliation.
 
 CPG Pulse is a data platform that ingests these heterogeneous sources,
 conforms them to a canonical product/store/retailer identifier space,
 validates data quality, models the result as a dimensional warehouse, and
-serves curated, analytics-ready metrics to a dashboard and an API — on a
+serves curated, analytics-ready metrics to a dashboard and an API - on a
 schedule, with lineage, history, and monitoring.
 
 ## Business Questions This Platform Answers
@@ -95,7 +95,7 @@ DDL · FastAPI · Streamlit · Docker Compose · GitHub Actions · Terraform
 (documented, not applied)
 
 **Local-first, cloud-compatible**: everything runs on a laptop via Docker
-Compose (Postgres standing in for Snowflake, MinIO standing in for S3) — see
+Compose (Postgres standing in for Snowflake, MinIO standing in for S3) - see
 `docs/architecture.md` §7 for exactly what changes to point the same code at
 real AWS/Snowflake.
 
@@ -156,24 +156,24 @@ cd dbt && dbt test             # 89 dbt tests
 
 **204 tests total: 199 passing, 5 honestly skipped** with a documented reason
 (the 5 require a live Spark job execution; they run for real inside the
-Docker Compose `airflow-scheduler` container — confirmed, see Known
-Limitations below — but skip on a bare Windows host, which has no working
+Docker Compose `airflow-scheduler` container - confirmed, see Known
+Limitations below - but skip on a bare Windows host, which has no working
 JVM/PySpark path) rather than mocked or silently omitted. See
 `docs/checklist.md` Phase 8 for the full breakdown, including real bugs that
 were found and fixed *by* writing these tests and by live Docker validation
 (not just found ahead of time and tested around):
 
 1. A backfill for an old date range was silently regressing the ingestion
-   watermark backward — fixed in `ingestion/common/base_ingest.py`.
+   watermark backward - fixed in `ingestion/common/base_ingest.py`.
 2. `dbt snapshot` run before `dbt run` fails on a fresh database (the SCD2
-   snapshots read from staging models, which must exist first) — fixed in
+   snapshots read from staging models, which must exist first) - fixed in
    the CI workflow, `Makefile`, and this project's own docs.
 3. `scripts/load_to_warehouse.py` OOM-killed its container loading 3.76M
-   curated rows via a single `pd.read_parquet()` + `to_sql()` call — fixed by
+   curated rows via a single `pd.read_parquet()` + `to_sql()` call - fixed by
    streaming the curated Parquet directory in batches via `pyarrow.dataset`.
 4. That streaming fix initially dropped the Hive-partition date column
    (`transaction_date`/`snapshot_date`) that Spark's `partitionBy()` write
-   encodes only in directory names — fixed by passing `partitioning="hive"`
+   encodes only in directory names - fixed by passing `partitioning="hive"`
    to the `pyarrow.dataset` reader. See `docs/runbook.md` §5 for both.
 
 ---
@@ -184,7 +184,7 @@ were found and fixed *by* writing these tests and by live Docker validation
 shipments, promotions, product master, store master, retailer↔product
 mapping, retailers, distribution centers, e-commerce orders, calendar) flow
 through a layered lake (raw → standardized → curated) into a dbt-built
-dimensional warehouse: 8 dimensions (2 as real SCD Type 2 — verified live by
+dimensional warehouse: 8 dimensions (2 as real SCD Type 2 - verified live by
 mutating a product's cost and confirming the history split correctly), 6
 facts, and 8 analytics marts (stockout risk, excess inventory, shipment
 reconciliation, promotion effectiveness, omnichannel performance, retailer
@@ -200,12 +200,12 @@ Units sold, gross/net sales, ASP, discount rate, sales velocity,
 sell-through rate, inventory turnover, days/weeks of supply, out-of-stock
 rate, excess inventory rate, shipment-to-POS variance, order-to-delivery
 lead time, promotion lift/incremental units/ROI, return rate, e-commerce
-sales share, retailer/category contribution, data freshness, DQ pass rate —
+sales share, retailer/category contribution, data freshness, DQ pass rate -
 all defined with formula, required tables, SQL, and stated assumptions in
 **[`docs/metrics.md`](docs/metrics.md)**.
 
 **Promotion lift/ROI are explicitly analytical estimates, not causal
-inference** — no control group exists, and the estimate is sample-size
+inference** - no control group exists, and the estimate is sample-size
 sensitive (empirically verified: see `docs/metrics.md`'s Promotion Lift
 section for the actual before/after numbers from that investigation).
 
@@ -215,7 +215,7 @@ section for the actual before/after numbers from that investigation).
 
 The dashboard's 6 pages (Executive Overview, Sales Performance, Inventory
 Intelligence, Promotion Analytics, Shipment Reconciliation, Data Quality &
-Pipeline Ops) were verified live — actually opened in a headless Chromium
+Pipeline Ops) were verified live - actually opened in a headless Chromium
 browser via Playwright, clicked through, and screenshotted, confirming real
 data renders correctly (not just that the code runs without throwing). That
 screenshot session's images live in this project's build history but weren't
@@ -225,7 +225,7 @@ here.
 
 ## Known Limitations
 
-Stated plainly, not glossed over — see `docs/remaining_work.md` §5 for the
+Stated plainly, not glossed over - see `docs/remaining_work.md` §5 for the
 full detail behind each:
 
 - **PySpark cannot execute a job on this project's Windows/Python 3.12
@@ -244,14 +244,14 @@ full detail behind each:
   $73.9M net sales). Three real bugs were found and fixed doing this: two
   `airflow/Dockerfile`/`requirements-airflow.txt` issues (missing JDK, and
   pinned-package conflicts with Airflow's constraints file) and the
-  `load_to_warehouse.py` OOM + Hive-partitioning bugs above — see
+  `load_to_warehouse.py` OOM + Hive-partitioning bugs above - see
   `docs/runbook.md` §1 and §5.
-- **Airflow DAG files don't exist yet** — orchestration is designed for
+- **Airflow DAG files don't exist yet** - orchestration is designed for
   (docstrings reference `dag_id`s, `docker-compose.yml` provisions the
   Airflow containers) but the actual DAG Python files were never written.
 - Only 2 of 5 transactional sources (POS sales, inventory) got full PySpark
   standardization jobs; the rest use a documented, simpler local-dev fallback.
-- No real Snowflake or AWS account was ever available — the Snowflake DDL is
+- No real Snowflake or AWS account was ever available - the Snowflake DDL is
   a careful manual translation of the live-verified Postgres schema, not
   independently executed.
 - API has no authentication layer (explicitly out of scope for this
@@ -269,7 +269,7 @@ full detail behind each:
 
 ## Interview Talking Points
 
-**[`docs/interview_prep.md`](docs/interview_prep.md)** — resume bullets and
+**[`docs/interview_prep.md`](docs/interview_prep.md)** - resume bullets and
 interview Q&A grounded in what was actually built and actually validated,
 including the real bugs found along the way (finding and fixing bugs via
 live testing is a stronger interview story than "everything worked first
@@ -286,6 +286,6 @@ try").
 | [`docs/source_to_target_mapping.md`](docs/source_to_target_mapping.md) | How each source flows raw → standardized → curated → staging → marts |
 | [`docs/metrics.md`](docs/metrics.md) | Every business metric: formula, tables, SQL, assumptions |
 | [`docs/runbook.md`](docs/runbook.md) | How to run, troubleshoot, and operate every stage |
-| [`docs/checklist.md`](docs/checklist.md) | Phase-by-phase build log — what's done, what's proven, what's not |
+| [`docs/checklist.md`](docs/checklist.md) | Phase-by-phase build log - what's done, what's proven, what's not |
 | [`docs/remaining_work.md`](docs/remaining_work.md) | Handoff document from the session that built Phases 1-7 |
 | [`docs/interview_prep.md`](docs/interview_prep.md) | Resume bullets + interview Q&A |

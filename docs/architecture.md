@@ -1,4 +1,4 @@
-# CPG Pulse — Architecture & Planning (Phase 1)
+# CPG Pulse - Architecture & Planning (Phase 1)
 
 ## 1. Final Problem Statement
 
@@ -19,7 +19,7 @@ and error-prone. There is no single trusted place to look.
 CPG Pulse is a data platform that ingests these heterogeneous sources, standardizes and
 conforms them to a canonical product/store/retailer identifier space, validates data
 quality, models the result as a dimensional warehouse, and serves curated,
-analytics-ready metrics to dashboards and an API — on a schedule, with lineage,
+analytics-ready metrics to dashboards and an API - on a schedule, with lineage,
 history, and monitoring, the way a real CPG data engineering team would build it.
 
 ## 2. Business Use Cases
@@ -42,7 +42,7 @@ history, and monitoring, the way a real CPG data engineering team would build it
 - This is a **fictional** company; all data is synthetic. No real retailer, brand, or
   consumer data is used anywhere.
 - "Production-style" means the code, patterns, and architecture are what a real team
-  would deploy — not that it is deployed with a real cloud budget, real SLAs, or real
+  would deploy - not that it is deployed with a real cloud budget, real SLAs, or real
   traffic.
 - Retailers are assumed to send **daily batch files** (not real-time streams). This
   matches how most mid-size CPG EDI/retailer-portal integrations actually work
@@ -57,7 +57,7 @@ history, and monitoring, the way a real CPG data engineering team would build it
 - No real AWS/Snowflake accounts are provisioned for this environment. See §8 for how
   local and cloud deployment stay code-compatible.
 - Data volume is "demo-realistic," not production-scale: ~100 products x ~100 stores x
-  3 retailers x 12+ months of daily grain is on the order of a few million fact rows —
+  3 retailers x 12+ months of daily grain is on the order of a few million fact rows -
   large enough to require partitioning/incremental logic to matter, small enough to run
   entirely on a laptop.
 
@@ -173,17 +173,17 @@ flowchart LR
 |---|---|
 | **Python** for ingestion/generators | Ubiquitous in DE, easy to unit test, good S3/Parquet/Pandas ecosystem |
 | **PySpark** for standardization | Demonstrates distributed processing patterns even at demo scale; same code path scales to Glue in prod |
-| **S3 (prod) / MinIO (local)** | MinIO is S3-API-compatible, so ingestion/Spark code is identical in both environments — only the endpoint/credentials change |
-| **Airflow** | Industry-standard batch orchestrator; native retries, backfill, sensors, SLAs — matches the "daily retailer file" pattern |
+| **S3 (prod) / MinIO (local)** | MinIO is S3-API-compatible, so ingestion/Spark code is identical in both environments - only the endpoint/credentials change |
+| **Airflow** | Industry-standard batch orchestrator; native retries, backfill, sensors, SLAs - matches the "daily retailer file" pattern |
 | **Snowflake (prod) / PostgreSQL (local)** | dbt abstracts the SQL dialect difference for ~95% of models; Postgres is free and runs in Docker, so the same dbt project targets either via `profiles.yml` target selection |
-| **dbt** | Version-controlled SQL transformations, built-in testing, lineage/docs, snapshots for SCD2 — the standard for warehouse transformation |
+| **dbt** | Version-controlled SQL transformations, built-in testing, lineage/docs, snapshots for SCD2 - the standard for warehouse transformation |
 | **PostgreSQL for metadata** | Lightweight, relational, perfect fit for run/watermark/DQ bookkeeping; doubles as the local warehouse target |
-| **Great Expectations-style validation** | Declarative, auditable DQ rules with a report artifact per run (implemented as a lightweight in-house validator honoring the same expectation vocabulary, to avoid a heavy dependency conflicting with local PySpark/Java versions — documented in `docs/runbook.md`) |
-| **FastAPI** | Async, typed (Pydantic), auto-generated OpenAPI docs — fast to build a clean analytics API |
+| **Great Expectations-style validation** | Declarative, auditable DQ rules with a report artifact per run (implemented as a lightweight in-house validator honoring the same expectation vocabulary, to avoid a heavy dependency conflicting with local PySpark/Java versions - documented in `docs/runbook.md`) |
+| **FastAPI** | Async, typed (Pydantic), auto-generated OpenAPI docs - fast to build a clean analytics API |
 | **Streamlit** | Fastest way to build a real multi-page analytics dashboard in Python without a JS toolchain |
 | **Docker Compose** | One command spins up Postgres + MinIO + Airflow + API + Dashboard locally |
 | **GitHub Actions** | Free CI for a public portfolio repo; lint + unit tests + dbt compile + Docker build |
-| **Terraform** | Documents *how* this would be provisioned in real AWS/Snowflake — provided but not applied in this environment (no cloud credentials) |
+| **Terraform** | Documents *how* this would be provisioned in real AWS/Snowflake - provided but not applied in this environment (no cloud credentials) |
 
 ## 7. Local vs. Cloud Deployment
 
@@ -200,9 +200,9 @@ flowchart LR
 The design principle: **ingestion, Spark, and dbt code never hardcode "local" or
 "cloud" logic.** Everything reads endpoints/credentials from environment variables
 (`AWS_ENDPOINT_URL`, `WAREHOUSE_TYPE`, dbt `target`), so the same codebase runs either
-way — this is what "local-first, cloud-compatible" means throughout this repo.
+way - this is what "local-first, cloud-compatible" means throughout this repo.
 
-## 8. Dimensional Model — Grain and Keys
+## 8. Dimensional Model - Grain and Keys
 
 ### Fact tables
 
@@ -213,7 +213,7 @@ way — this is what "local-first, cloud-compatible" means throughout this repo.
 | `fact_shipments` | one manufacturer shipment line | `shipment_id` | `product_sk, retailer_sk, distribution_center_sk, date_sk` |
 | `fact_promotions` | retailer x product x promotion x date (promotion spread across its active date range) | `promotion_id, retailer_id, product_id, activity_date` | `product_sk, retailer_sk, promotion_sk, date_sk` |
 | `fact_ecommerce_orders` | one e-commerce order line | `order_id, product_id` | `product_sk, date_sk, channel_sk` |
-| `fact_data_quality_results` | one DQ check execution | `run_id, table_name, check_name, executed_at` | — (operational fact, no conformed dims) |
+| `fact_data_quality_results` | one DQ check execution | `run_id, table_name, check_name, executed_at` | - (operational fact, no conformed dims) |
 
 ### Dimension tables
 
@@ -235,14 +235,14 @@ mutable natural keys.
 ## 9. Data Quality Strategy
 
 - **Where it runs**: after PySpark standardization, before promotion to the curated
-  layer — bad data never reaches curated or the warehouse.
+  layer - bad data never reaches curated or the warehouse.
 - **Levels**: (1) schema-level (required columns present, types coercible), (2)
   row-level (nulls in required fields, invalid enums, negative units/sales, invalid
   date ranges, FK existence against `dim_product`/`dim_store`), (3) batch-level
   (row-count anomaly vs. trailing average, freshness vs. expected arrival SLA,
   duplicate-key rate).
-- **Output**: every run writes a row per check to `dq_results` (Postgres) — this
-  literally *is* `fact_data_quality_results` in the warehouse — plus a human-readable
+- **Output**: every run writes a row per check to `dq_results` (Postgres) - this
+  literally *is* `fact_data_quality_results` in the warehouse - plus a human-readable
   run report. Failing rows go to `data/quarantine/<source>/<date>/` with a
   `rejection_reason` column; corrected data can be replayed through the same ingestion
   path.
@@ -276,7 +276,7 @@ mutable natural keys.
   incremental `merge` on the fact's grain key). Re-running any pipeline for a given
   date produces the same row set, never duplicates.
 - **Error handling**: ingestion and Spark jobs never let one bad file/row fail the
-  whole batch — validation failures are caught per-record, routed to quarantine with a
+  whole batch - validation failures are caught per-record, routed to quarantine with a
   reason, and the run continues. A run is only marked `FAILED` in `pipeline_runs` for
   systemic errors (source unreachable, schema unreadable, warehouse connection lost).
 - **Schema evolution**: the ingestion schema-check step diffs the incoming file's
@@ -296,7 +296,7 @@ retry_count, source_file_count`. This table is:
 - The basis for freshness checks (`now() - max(ended_at)` per source vs. SLA).
 - In cloud deployment, mirrored to CloudWatch metrics/alarms via structured JSON logs
   (every log line includes `run_id` for correlation); locally, the same JSON logs go
-  to stdout/file and are queried straight from Postgres — no behavior difference in
+  to stdout/file and are queried straight from Postgres - no behavior difference in
   the application code.
 
 ## 13. Security Considerations
@@ -310,19 +310,19 @@ retry_count, source_file_count`. This table is:
 - API has no auth in this portfolio build (explicitly out of scope, documented as a
   known limitation) but is structured so an auth dependency could be added to FastAPI
   without touching route logic.
-- Synthetic data only — no real PII. E-commerce `customer_id` is a synthetic UUID with
+- Synthetic data only - no real PII. E-commerce `customer_id` is a synthetic UUID with
   no other attributes, so there is nothing to protect even hypothetically.
 - SQL is always parameterized (no string-built queries) in the API's service layer.
 
 ## 14. Cost-Conscious Design Decisions
 
 - MinIO + Postgres + Airflow LocalExecutor run entirely on a laptop with Docker
-  Compose — zero cloud spend to develop or demo the full platform.
+  Compose - zero cloud spend to develop or demo the full platform.
 - Data volume is intentionally right-sized (~100 products x ~100 stores x 3 retailers x
   12-18 months) to be "big enough to need partitioning and incremental logic" without
   requiring paid compute to process.
 - Snowflake DDL and Terraform are provided as documented, reviewable code (proof of
-  cloud fluency) but are not required to run or evaluate the project — this is called
+  cloud fluency) but are not required to run or evaluate the project - this is called
   out explicitly in the README so no reviewer expects a live cloud demo.
 - dbt incremental models + Spark partition-overwrite avoid full-history reprocessing,
   which is the actual dominant driver of both cloud cost and local runtime.

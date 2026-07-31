@@ -1,15 +1,15 @@
-# CPG Pulse — Metric Definitions
+# CPG Pulse - Metric Definitions
 
 Every metric below is either a column that already exists in a dbt mart (so
 the "SQL logic" section is literally copied from the running model) or a
 simple aggregation over one that any API/dashboard consumer can compute.
 Where a metric is inherently period-relative (growth, contribution) it is
-**not** pre-materialized as a stored column — it's computed at query time,
+**not** pre-materialized as a stored column - it's computed at query time,
 because "growth vs. what period" and "contribution within what scope" are
 consumer decisions, not warehouse facts.
 
 All dollar figures are in the synthetic dataset's implied currency (no
-multi-currency handling exists — see `docs/runbook.md` known limitations).
+multi-currency handling exists - see `docs/runbook.md` known limitations).
 
 ---
 
@@ -30,7 +30,7 @@ WHERE transaction_date BETWEEN :start_date AND :end_date
 ```
 
 **Assumptions:** Excludes direct-to-consumer e-commerce (`fact_ecommerce_orders.units_ordered`
-is a separate figure — see "E-commerce Sales Share" for the combined view).
+is a separate figure - see "E-commerce Sales Share" for the combined view).
 
 ---
 
@@ -61,7 +61,7 @@ for that SKU (`dim_retailer_product_mapping` era), not MSRP.
 **SQL:** `SELECT SUM(net_sales) FROM marts.fact_retail_sales WHERE ...`
 
 **Assumptions:** Does not net out returns (retail POS in this dataset has no
-return/refund concept — only the DTC e-commerce channel tracks `return_flag`).
+return/refund concept - only the DTC e-commerce channel tracks `return_flag`).
 
 ---
 
@@ -84,7 +84,7 @@ WHERE transaction_date BETWEEN :start_date AND :end_date
 
 **Assumptions:** `api/services/sales_service.py`'s `/sales/summary` endpoint
 instead reports `AVG(selling_price)` (a simple, per-row average) for
-simplicity/consistency with its GROUP BY structure — the two will differ
+simplicity/consistency with its GROUP BY structure - the two will differ
 slightly whenever unit volume correlates with price within the group. Use the
 revenue-weighted formula above for anything margin- or finance-adjacent.
 
@@ -115,14 +115,14 @@ round(sum(fs.discount_amount) / nullif(sum(fs.gross_sales), 0), 4) AS discount_r
 
 **Required tables:** `marts.fact_retail_sales`
 
-**SQL:** No stored column — call `/sales/summary` twice with two non-overlapping
+**SQL:** No stored column - call `/sales/summary` twice with two non-overlapping
 date ranges and compute client-side (this is what the Executive Overview
 dashboard page's date-range picker enables, though the page itself currently
-shows point-in-time totals, not a growth delta — see `docs/runbook.md` for
+shows point-in-time totals, not a growth delta - see `docs/runbook.md` for
 this as a documented near-term enhancement).
 
 **Assumptions:** "Comparable period" (same length, ideally same seasonality)
-is left to the caller — the warehouse has no opinion on what counts as a fair
+is left to the caller - the warehouse has no opinion on what counts as a fair
 comparison.
 
 ---
@@ -130,10 +130,10 @@ comparison.
 ## Sales Velocity
 
 **Business meaning:** How fast a SKU is actually selling, right now, at a
-given store — the demand-side input to stockout/excess-inventory risk.
+given store - the demand-side input to stockout/excess-inventory risk.
 
 **Formula:** Trailing 14-day average daily units sold, computed as-of each
-inventory snapshot date (not a simple day-count average — see the model's own
+inventory snapshot date (not a simple day-count average - see the model's own
 comment for why a fixed 14-day denominator is used instead of counting
 observed sale-days).
 
@@ -147,7 +147,7 @@ where `units_recent` sums `fact_retail_sales.units_sold` over the 14 days
 ending on the snapshot date, for that exact `(product_id, store_id)`.
 
 **Assumptions:** A 14-day window is a fixed constant in the model, not a
-`dbt_project.yml` var (unlike the stockout/excess thresholds) — changing it
+`dbt_project.yml` var (unlike the stockout/excess thresholds) - changing it
 requires editing the SQL directly. Also produces `velocity_trend`
 (ACCELERATING/STABLE/DECLINING/NEW_DEMAND/NO_DEMAND) by comparing this window
 to the prior 14 days.
@@ -157,13 +157,13 @@ to the prior 14 days.
 ## Sell-Through Rate
 
 **Business meaning:** Of the inventory available to sell in a period, what
-fraction actually sold — the inverse framing of excess inventory.
+fraction actually sold - the inverse framing of excess inventory.
 
 **Formula:** `units_sold_in_period / (units_sold_in_period + ending_available_units)`
 
 **Required tables:** `marts.fact_retail_sales`, `marts.fact_inventory_snapshot`
 
-**SQL:** Not a stored column — compute by joining the two facts on
+**SQL:** Not a stored column - compute by joining the two facts on
 `(product_id, store_id)` for a given period:
 ```sql
 WITH sold AS (
@@ -217,7 +217,7 @@ FROM sold s JOIN avg_inventory a USING (product_id, store_id)
 ```
 
 **Assumptions:** Uses units, not dollar cost-of-goods (a common alternate
-turnover formula uses COGS / average inventory value) — this dataset has
+turnover formula uses COGS / average inventory value) - this dataset has
 `unit_cost` on `dim_product` if a dollar-based version is needed instead.
 
 ---
@@ -251,7 +251,7 @@ code change):
 - Zero/null velocity → **NO_RECENT_DEMAND**, not a misleadingly low risk score
 
 **Assumptions:** Uses the 14-day trailing velocity from `int_daily_velocity`,
-not a longer-window or seasonally-adjusted demand forecast — a real
+not a longer-window or seasonally-adjusted demand forecast - a real
 replenishment system would also factor in open purchase orders and supplier
 lead time, which this dataset's `on_order_units` column captures but the risk
 formula does not yet incorporate (see `docs/runbook.md` known limitations).
@@ -276,12 +276,12 @@ WHERE snapshot_date BETWEEN :start AND :end
 ```
 The retailer- and product-scorecard marts instead report `high_stockout_risk_rate`
 (share of snapshots at HIGH risk, i.e. <3 days of supply, a leading indicator)
-rather than this strict "already at zero" trailing measure — both are valid,
+rather than this strict "already at zero" trailing measure - both are valid,
 answering slightly different questions ("are we about to run out" vs. "did we
 already run out").
 
 **Assumptions:** None beyond snapshot cadence being frequent enough to catch
-stockouts (this dataset's snapshots are weekly — see `docs/runbook.md`).
+stockouts (this dataset's snapshots are weekly - see `docs/runbook.md`).
 
 ---
 
@@ -301,7 +301,7 @@ SELECT COUNT(*) FILTER (WHERE excess_inventory_risk_level IN ('EXCESS', 'CRITICA
 FROM marts.mart_excess_inventory_risk
 ```
 
-**Assumptions:** See Days of Supply above — the 45-day threshold is a var,
+**Assumptions:** See Days of Supply above - the 45-day threshold is a var,
 not hardcoded, and doesn't yet account for product-specific shelf life
 (docs/architecture.md's Excess Inventory Logic section calls this out as a
 "use if available" input that isn't in this dataset).
@@ -311,7 +311,7 @@ not hardcoded, and doesn't yet account for product-specific shelf life
 ## Shipment-to-POS Variance
 
 **Business meaning:** How far manufacturer shipments into a retailer's DC
-diverge from consumer POS sell-through for the same product/week — the
+diverge from consumer POS sell-through for the same product/week - the
 reconciliation signal for detecting stockout risk, inventory buildup, or
 reporting delays before they show up anywhere else.
 
@@ -322,7 +322,7 @@ reporting delays before they show up anywhere else.
 
 **SQL:** `dbt/models/marts/analytics/mart_shipment_pos_reconciliation.sql`,
 grain `retailer_id x product_id x week_start`, built via a `FULL OUTER JOIN`
-(deliberately — a week with shipments but no POS match, or vice versa, is
+(deliberately - a week with shipments but no POS match, or vice versa, is
 itself a signal, not something to drop via an inner join). Signal
 classification:
 ```sql
@@ -336,9 +336,9 @@ end as reconciliation_signal
 ```
 
 **Assumptions:** The 1.3x (30%) threshold for "outpacing" is hardcoded in
-the model, not a `dbt_project.yml` var — a reasonable next enhancement.
+the model, not a `dbt_project.yml` var - a reasonable next enhancement.
 Shipments are DC-level (retailer x product x week), while POS is store-level
-rolled up to the same grain — this masks store-level reconciliation gaps
+rolled up to the same grain - this masks store-level reconciliation gaps
 that net out at the retailer level (documented in `docs/runbook.md`).
 
 ---
@@ -346,7 +346,7 @@ that net out at the retailer level (documented in `docs/runbook.md`).
 ## Order-to-Delivery Lead Time
 
 **Business meaning:** How long a manufacturer shipment actually took vs. its
-estimate — a supply-chain reliability signal.
+estimate - a supply-chain reliability signal.
 
 **Formula:** `delivery_variance_days = actual_delivery_date - estimated_delivery_date`
 (positive = late, negative = early).
@@ -369,7 +369,7 @@ WHERE actual_delivery_date IS NOT NULL
 ```
 
 **Assumptions:** `NULL` for `IN_TRANSIT`/`CANCELLED` shipments (no actual
-delivery date yet/ever) — excluded from averages by the `WHERE` clause above,
+delivery date yet/ever) - excluded from averages by the `WHERE` clause above,
 not counted as zero.
 
 ---
@@ -419,13 +419,13 @@ is surfaced):**
   small 2-month `data/sample` dataset, most promotions don't have the full
   56-day pre-period available (the dataset barely started), producing
   wildly inflated lift figures (avg >2000%). Regenerating a 7-month test
-  dataset — where 45/128 promotions got the full 56-day lookback — produced
+  dataset - where 45/128 promotions got the full 56-day lookback - produced
   a median lift of ~117%, closely tracking the synthetic generator's
   injected ground-truth lift range of 40-180%. **Treat lift/ROI figures as
   unreliable for any promotion whose `baseline_days` (also exposed on the
   API/mart) is well under 56.**
 - `lift_percentage` is `NULL` (not zero) when `baseline_avg_daily_units` is
-  `NULL` — insufficient pre-period data, not "no lift."
+  `NULL` - insufficient pre-period data, not "no lift."
 
 ---
 
@@ -444,7 +444,7 @@ FROM marts.fact_ecommerce_orders
 WHERE order_date BETWEEN :start AND :end
 ```
 
-**Assumptions:** Only defined for the DTC e-commerce channel — retail POS
+**Assumptions:** Only defined for the DTC e-commerce channel - retail POS
 (`fact_retail_sales`) has no return/refund concept in this dataset's source
 schema (matches the original spec's field list for that source).
 
@@ -459,7 +459,7 @@ CPG Pulse's own DTC storefront) vs. physical in-store.
 **Formula:** `net_sales(channel_type != 'Physical Retail') / net_sales(all channels)`
 
 **Required tables:** `marts.mart_omnichannel_performance` (unifies
-`fact_retail_sales` + `fact_ecommerce_orders` — see
+`fact_retail_sales` + `fact_ecommerce_orders` - see
 `dbt/models/intermediate/int_product_daily_sales.sql`)
 
 **SQL:** (as implemented in `dashboard/app.py`):
@@ -470,7 +470,7 @@ ecommerce_share = ecommerce_net_sales / total_net_sales
 ```
 
 **Assumptions:** "Omnichannel" (retailer-operated online/pickup/delivery) is
-counted on the e-commerce side of the split — a defensible but not the only
+counted on the e-commerce side of the split - a defensible but not the only
 reasonable choice; a stricter definition might count only `MARKETPLACE` +
 `DTC_ECOMMERCE` ("truly online-only") and treat "Omnichannel" as its own
 third bucket.
@@ -496,7 +496,7 @@ WHERE transaction_date BETWEEN :start AND :end
 GROUP BY retailer_id
 ```
 
-**Assumptions:** None. Not currently exposed as a dedicated API field —
+**Assumptions:** None. Not currently exposed as a dedicated API field -
 computable from `/sales/summary?group_by=retailer`'s `net_sales` column
 divided by the sum across all returned rows.
 
@@ -511,10 +511,10 @@ divided by the sum across all returned rows.
 **Required tables:** `marts.fact_retail_sales` joined to `marts.dim_product` (current)
 
 **SQL:** same pattern as Retailer Contribution, grouped by `dim_product.category`
-instead — directly available via `/sales/summary?group_by=category`.
+instead - directly available via `/sales/summary?group_by=category`.
 
 **Assumptions:** Uses each product's *current* category (`dim_product WHERE is_current`)
-even for historical sales — a product's category reassignment (tracked by the
+even for historical sales - a product's category reassignment (tracked by the
 SCD2 snapshot) is not applied point-in-time here. A stricter historical view
 would join on the SCD2 version effective as of `transaction_date`.
 
@@ -538,11 +538,11 @@ passed = lag_days <= max_lag_days
 Configured per-suite in YAML (`spark/quality/expectations/*.yml`), e.g.
 `retail_pos_sales`: `max_lag_days: 3`; `retail_inventory`: `max_lag_days: 10`
 (inventory snapshots are weekly in this dataset, so a looser threshold is
-correct — see `docs/runbook.md`).
+correct - see `docs/runbook.md`).
 
 **Assumptions:** Compares against `dt.date.today()` (wall-clock date), which
 means freshness checks against this project's **synthetic, backdated 2025
-data** will always report as extremely stale if actually run — this is
+data** will always report as extremely stale if actually run - this is
 expected and correct behavior for the check itself, not a bug; it's simply
 not meaningful to run a freshness check against fixed historical demo data
 (see `docs/runbook.md`).
@@ -558,7 +558,7 @@ overall or for a given table/check category.
 
 **Required tables:** `marts.fact_data_quality_results` (sourced from
 `pipeline_meta.dq_results`, copied into the warehouse's `landing` schema by
-`scripts/load_to_warehouse.py` — see `docs/source_to_target_mapping.md`)
+`scripts/load_to_warehouse.py` - see `docs/source_to_target_mapping.md`)
 
 **SQL:** `dbt/models/marts/analytics/mart_data_quality_summary.sql`:
 ```sql
@@ -572,9 +572,9 @@ group by 1, 2
 ```
 
 **Assumptions:** Empty (no rows) until `spark/jobs/run_quality_checks.py` has
-actually executed at least once — this table was **never populated** in this
+actually executed at least once - this table was **never populated** in this
 project's development environment (PySpark jobs were never executed on the
-Windows development host — see `docs/remaining_work.md` §5). The API and
+Windows development host - see `docs/remaining_work.md` §5). The API and
 dashboard both handle this as an explicit empty state, not an error.
 
 ---
@@ -582,9 +582,9 @@ dashboard both handle this as an explicit empty state, not an error.
 ## Known Limitations Summary (metrics-specific)
 
 - Every "period" metric (growth, sell-through, turnover) requires the caller
-  to choose a date range and comparison basis — the warehouse provides the
+  to choose a date range and comparison basis - the warehouse provides the
   raw facts, not an opinion about what date ranges are meaningful.
-- Promotion lift/ROI is the metric most likely to be over-interpreted — it is
+- Promotion lift/ROI is the metric most likely to be over-interpreted - it is
   explicitly an estimate, is sample-size sensitive, and has no control group.
   Never present it without that caveat.
 - Category/brand contribution uses current dimension attributes, not
