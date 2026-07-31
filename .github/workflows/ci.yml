@@ -34,9 +34,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Calling the gitleaks CLI directly (via its official Docker image)
+      # rather than gitleaks/gitleaks-action@v2: that action auto-derives a
+      # `--log-opts=<before>..<after>` scan range from the GitHub push
+      # event's before/after SHAs, which breaks with "stderr is not empty"
+      # whenever `before` doesn't resolve cleanly against the repo's actual
+      # history -- e.g. after a force-push/history rewrite, or on a repo
+      # with a very short history where the fallback range lands on the
+      # root commit's parent (which doesn't exist). A plain `gitleaks
+      # detect` with no log-opts range scans the entire history from HEAD
+      # unconditionally, which is what this job's comment above already
+      # promises, without depending on push-event metadata at all.
+      - run: docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect --source /repo -v --redact
 
   # ---------------------------------------------------------------------
   # Unit + integration + API tests, and the dbt project, all against a
